@@ -2,6 +2,7 @@ package circleci
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 var (
@@ -101,9 +103,25 @@ func TestClient_request(t *testing.T) {
 		fmt.Fprint(w, `{"login": "jszwedko"}`)
 	})
 
-	err := client.request("GET", "/me", &User{}, nil, nil)
+	err := client.request(context.Background(), "GET", "/me", &User{}, nil, nil)
 	if err != nil {
 		t.Errorf(`Client.request("GET", "/me", &User{}, nil, nil) errored with %s`, err)
+	}
+}
+
+func TestClientWithContext_request(t *testing.T) {
+	setup()
+	defer teardown()
+	client.Token = "ABCD"
+	mux.HandleFunc("/me", func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(1 * time.Second)
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 0*time.Second)
+	defer cancel()
+	err := client.request(ctx, "GET", "/me", &User{}, nil, nil)
+	if !strings.Contains(err.Error(), "context deadline exceeded") {
+		t.Errorf(`Client.request("GET", "/me", &User{}, nil, nil) didn't cancel request on timeout`)
 	}
 }
 
@@ -121,7 +139,7 @@ func TestClient_requestOverridesCircleToken(t *testing.T) {
 	values := url.Values{}
 	values.Set("circle-token", "pre-existing")
 
-	err := client.request("GET", "/me", &User{}, values, nil)
+	err := client.request(context.Background(), "GET", "/me", &User{}, values, nil)
 	if err != nil {
 		t.Errorf(`Client.request("GET", "/me", &User{}, nil, nil) errored with %s`, err)
 	}
@@ -142,7 +160,7 @@ func TestClient_request_withDebug(t *testing.T) {
 		fmt.Fprint(w, `{"login": "jszwedko"}`)
 	})
 
-	err := client.request("GET", "/me", &User{}, nil, nil)
+	err := client.request(context.Background(), "GET", "/me", &User{}, nil, nil)
 	if err != nil {
 		t.Errorf(`Client.request("GET", "/me", &User{}, nil, nil) errored with %s`, err)
 	}
@@ -174,7 +192,7 @@ func TestClient_request_unauthenticated(t *testing.T) {
 		fmt.Fprint(w, `{"message": "You must log in first"}`)
 	})
 
-	err := client.request("GET", "/me", &User{}, nil, nil)
+	err := client.request(context.Background(), "GET", "/me", &User{}, nil, nil)
 	testAPIError(t, err, http.StatusUnauthorized, "You must log in first")
 }
 
@@ -186,7 +204,7 @@ func TestClient_request_noErrorMessage(t *testing.T) {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 
-	err := client.request("GET", "/me", &User{}, nil, nil)
+	err := client.request(context.Background(), "GET", "/me", &User{}, nil, nil)
 	testAPIError(t, err, http.StatusInternalServerError, "")
 }
 
@@ -435,7 +453,7 @@ func TestClient_recentBuilds_multiPage(t *testing.T) {
 		requestCount++
 	})
 
-	builds, err := client.recentBuilds("recent-builds", nil, 199, 0)
+	builds, err := client.recentBuilds(context.Background(), "recent-builds", nil, 199, 0)
 	if err != nil {
 		t.Errorf("Client.ListRecentBuilds(%+v, %+v) returned error: %v", 199, 0, err)
 	}
@@ -456,7 +474,7 @@ func TestClient_recentBuilds_multiPageExhausted(t *testing.T) {
 		fmt.Fprint(w, fmt.Sprintf("[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 50), ",")))
 	})
 
-	builds, err := client.recentBuilds("recent-builds", nil, 199, 0)
+	builds, err := client.recentBuilds(context.Background(), "recent-builds", nil, 199, 0)
 	if err != nil {
 		t.Errorf("Client.ListRecentBuilds(%+v, %+v) returned error: %v", 199, 0, err)
 	}
@@ -489,7 +507,7 @@ func TestClient_recentBuilds_multiPageNoLimit(t *testing.T) {
 		requestCount++
 	})
 
-	builds, err := client.recentBuilds("recent-builds", nil, -1, 0)
+	builds, err := client.recentBuilds(context.Background(), "recent-builds", nil, -1, 0)
 	if err != nil {
 		t.Errorf("Client.ListRecentBuilds(%+v, %+v) returned error: %v", -1, 0, err)
 	}
@@ -965,6 +983,24 @@ func TestClient_GetActionOutput_noOutput(t *testing.T) {
 
 	if outputs != nil {
 		t.Errorf("Client.GetActionOutput(%+v) returned %+v: want %v", action, outputs, nil)
+	}
+}
+
+func TestClient_GetActionOutput_withContext(t *testing.T) {
+	setup()
+	defer teardown()
+	mux.HandleFunc("/some-s3-path", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprintf(w, `[{"Message":"hello"}, {"Message": "world"}]`)
+	})
+
+	action := &Action{HasOutput: true, OutputURL: server.URL + "/some-s3-path"}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Microsecond)
+	defer cancel()
+	_, err := client.GetActionOutputsWithContext(ctx, action)
+	if err == nil || !strings.Contains(err.Error(), "context deadline exceeded") {
+		t.Errorf("Client.GetActionOutput(%+v) should've returned context deadline error", action)
 	}
 }
 
