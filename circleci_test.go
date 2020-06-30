@@ -442,11 +442,11 @@ func TestClient_recentBuilds_multiPage(t *testing.T) {
 		case 0:
 			testQueryIncludes(t, r, "offset", "0")
 			testQueryIncludes(t, r, "limit", "100")
-			fmt.Fprint(w, fmt.Sprintf("[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 100), ",")))
+			fmt.Fprintf(w, "[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 100), ","))
 		case 1:
 			testQueryIncludes(t, r, "offset", "100")
 			testQueryIncludes(t, r, "limit", "99")
-			fmt.Fprint(w, fmt.Sprintf("[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 99), ",")))
+			fmt.Fprintf(w, "[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 99), ","))
 		default:
 			t.Errorf("Client.ListRecentBuilds(%+v, %+v) made more than two requests to /recent-builds", 199, 0)
 		}
@@ -471,7 +471,7 @@ func TestClient_recentBuilds_multiPageExhausted(t *testing.T) {
 		testMethod(t, r, "GET")
 		testQueryIncludes(t, r, "offset", "0")
 		testQueryIncludes(t, r, "limit", "100")
-		fmt.Fprint(w, fmt.Sprintf("[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 50), ",")))
+		fmt.Fprintf(w, "[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 50), ","))
 	})
 
 	builds, err := client.recentBuilds(context.Background(), "recent-builds", nil, 199, 0)
@@ -496,11 +496,11 @@ func TestClient_recentBuilds_multiPageNoLimit(t *testing.T) {
 		case 0:
 			testQueryIncludes(t, r, "offset", "0")
 			testQueryIncludes(t, r, "limit", "100")
-			fmt.Fprint(w, fmt.Sprintf("[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 100), ",")))
+			fmt.Fprintf(w, "[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 100), ","))
 		case 1:
 			testQueryIncludes(t, r, "offset", "100")
 			testQueryIncludes(t, r, "limit", "100")
-			fmt.Fprint(w, fmt.Sprintf("[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 99), ",")))
+			fmt.Fprintf(w, "[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 99), ","))
 		default:
 			t.Errorf("Client.ListRecentBuilds(%+v, %+v) made more than two requests to /recent-builds", -1, 0)
 		}
@@ -549,7 +549,7 @@ func TestClient_ListRecentBuildsForProject(t *testing.T) {
 		fmt.Fprint(w, `[{"build_num": 123}, {"build_num": 124}]`)
 	})
 
-	call := fmt.Sprintf("Client.ListRecentBuilds(foo, bar, master, running, 10, 0)")
+	call := "Client.ListRecentBuilds(foo, bar, master, running, 10, 0)"
 
 	builds, err := client.ListRecentBuildsForProject(VcsTypeGithub, "foo", "bar", "master", "running", 10, 0)
 	if err != nil {
@@ -573,7 +573,7 @@ func TestClient_ListRecentBuildsForProject_noBranch(t *testing.T) {
 		fmt.Fprint(w, `[{"build_num": 123}, {"build_num": 124}]`)
 	})
 
-	call := fmt.Sprintf("Client.ListRecentBuilds(foo, bar, , running, 10, 0)")
+	call := "Client.ListRecentBuilds(foo, bar, , running, 10, 0)"
 
 	builds, err := client.ListRecentBuildsForProject(VcsTypeGithub, "foo", "bar", "", "running", 10, 0)
 	if err != nil {
