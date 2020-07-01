@@ -118,7 +118,7 @@ func TestClientWithContext_request(t *testing.T) {
 		time.Sleep(1 * time.Second)
 	})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Microsecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 0*time.Microsecond)
 	defer cancel()
 	err := client.request(ctx, "GET", "/me", &User{}, nil, nil)
 	if err == nil || !errors.Is(err, context.DeadlineExceeded) {
@@ -997,7 +997,7 @@ func TestClient_GetActionOutput_withContext(t *testing.T) {
 
 	action := &Action{HasOutput: true, OutputURL: server.URL + "/some-s3-path"}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Microsecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 0*time.Microsecond)
 	defer cancel()
 	_, err := client.GetActionOutputsWithContext(ctx, action)
 	if err == nil || !errors.Is(err, context.DeadlineExceeded) {
