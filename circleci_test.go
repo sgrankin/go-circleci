@@ -523,7 +523,7 @@ func TestClient_ListRecentBuilds(t *testing.T) {
 func TestClient_ListRecentBuildsForProject(t *testing.T) {
 	setup()
 	defer teardown()
-	mux.HandleFunc("/project/foo/bar/tree/master", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/project/github/foo/bar/tree/master", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
 		testQueryIncludes(t, r, "filter", "running")
 		testQueryIncludes(t, r, "offset", "0")
@@ -533,7 +533,7 @@ func TestClient_ListRecentBuildsForProject(t *testing.T) {
 
 	call := fmt.Sprintf("Client.ListRecentBuilds(foo, bar, master, running, 10, 0)")
 
-	builds, err := client.ListRecentBuildsForProject("foo", "bar", "master", "running", 10, 0)
+	builds, err := client.ListRecentBuildsForProject(VcsTypeGithub, "foo", "bar", "master", "running", 10, 0)
 	if err != nil {
 		t.Errorf("%s returned error: %v", call, err)
 	}
@@ -547,7 +547,7 @@ func TestClient_ListRecentBuildsForProject(t *testing.T) {
 func TestClient_ListRecentBuildsForProject_noBranch(t *testing.T) {
 	setup()
 	defer teardown()
-	mux.HandleFunc("/project/foo/bar", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/project/github/foo/bar", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
 		testQueryIncludes(t, r, "filter", "running")
 		testQueryIncludes(t, r, "offset", "0")
@@ -557,7 +557,7 @@ func TestClient_ListRecentBuildsForProject_noBranch(t *testing.T) {
 
 	call := fmt.Sprintf("Client.ListRecentBuilds(foo, bar, , running, 10, 0)")
 
-	builds, err := client.ListRecentBuildsForProject("foo", "bar", "", "running", 10, 0)
+	builds, err := client.ListRecentBuildsForProject(VcsTypeGithub, "foo", "bar", "", "running", 10, 0)
 	if err != nil {
 		t.Errorf("%s returned error: %v", call, err)
 	}
@@ -590,19 +590,19 @@ func TestClient_GetBuild(t *testing.T) {
 func TestClient_ListBuildArtifacts(t *testing.T) {
 	setup()
 	defer teardown()
-	mux.HandleFunc("/project/jszwedko/foo/123/artifacts", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/project/github/jszwedko/foo/123/artifacts", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
-		fmt.Fprint(w, `[{"Path": "/some/path"}]`)
+		fmt.Fprint(w, `[{"path": "/some/path"}]`)
 	})
 
-	artifacts, err := client.ListBuildArtifacts("jszwedko", "foo", 123)
+	artifacts, err := client.ListBuildArtifacts(VcsTypeGithub, "jszwedko", "foo", 123)
 	if err != nil {
-		t.Errorf("Client.ListBuildArtifacts(jszwedko, foo, 123) returned error: %v", err)
+		t.Errorf("Client.ListBuildArtifacts(github, jszwedko, foo, 123) returned error: %v", err)
 	}
 
 	want := []*Artifact{{Path: "/some/path"}}
 	if !reflect.DeepEqual(artifacts, want) {
-		t.Errorf("Client.ListBuildArtifacts(jszwedko, foo, 123) returned %+v, want %+v", artifacts, want)
+		t.Errorf("Client.ListBuildArtifacts(github, jszwedko, foo, 123) returned %+v, want %+v", artifacts, want)
 	}
 }
 
@@ -742,6 +742,27 @@ func TestClient_BuildByProjectTag(t *testing.T) {
 	err := client.BuildByProjectTag(VcsTypeGithub, "jszwedko", "foo", "v0.0.1")
 	if err != nil {
 		t.Errorf("Client.BuildByProjectTag(github, jszwedko, foo, v0.0.1) returned error: %v", err)
+	}
+}
+
+func TestClient_BuildByProject(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/project/github/jszwedko/foo/build", func(w http.ResponseWriter, r *http.Request) {
+		testBody(t, r, `{"branch":"pull/1234","revision":"8afbae7ec63b2b0f2886740d03161dbb08ba55f5"}`)
+		testMethod(t, r, "POST")
+		fmt.Fprint(w, `{"status": 200, "body": "Build created"}`)
+	})
+
+	opts := map[string]interface{}{
+		"revision": "8afbae7ec63b2b0f2886740d03161dbb08ba55f5",
+		"branch":   "pull/1234",
+	}
+
+	err := client.BuildByProject(VcsTypeGithub, "jszwedko", "foo", opts)
+	if err != nil {
+		t.Errorf("Client.BuildByProjectTag(github, jszwedko, foo, opts) returned error: %v", err)
 	}
 }
 
