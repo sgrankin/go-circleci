@@ -3,6 +3,7 @@ package circleci
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -117,11 +118,11 @@ func TestClientWithContext_request(t *testing.T) {
 		time.Sleep(1 * time.Second)
 	})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 0*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Microsecond)
 	defer cancel()
 	err := client.request(ctx, "GET", "/me", &User{}, nil, nil)
-	if !strings.Contains(err.Error(), "context deadline exceeded") {
-		t.Errorf(`Client.request("GET", "/me", &User{}, nil, nil) didn't cancel request on timeout`)
+	if err == nil || !errors.As(err, &context.DeadlineExceeded) {
+		t.Error(`Client.request("GET", "/me", &User{}, nil, nil) didn't cancel request on timeout`)
 	}
 }
 
@@ -999,7 +1000,7 @@ func TestClient_GetActionOutput_withContext(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Microsecond)
 	defer cancel()
 	_, err := client.GetActionOutputsWithContext(ctx, action)
-	if err == nil || !strings.Contains(err.Error(), "context deadline exceeded") {
+	if err == nil || !errors.As(err, &context.DeadlineExceeded) {
 		t.Errorf("Client.GetActionOutput(%+v) should've returned context deadline error", action)
 	}
 }
