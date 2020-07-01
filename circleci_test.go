@@ -121,7 +121,7 @@ func TestClientWithContext_request(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Microsecond)
 	defer cancel()
 	err := client.request(ctx, "GET", "/me", &User{}, nil, nil)
-	if err == nil || !errors.As(err, &context.DeadlineExceeded) {
+	if err == nil || !errors.Is(err, context.DeadlineExceeded) {
 		t.Error(`Client.request("GET", "/me", &User{}, nil, nil) didn't cancel request on timeout`)
 	}
 }
@@ -1000,7 +1000,7 @@ func TestClient_GetActionOutput_withContext(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Microsecond)
 	defer cancel()
 	_, err := client.GetActionOutputsWithContext(ctx, action)
-	if err == nil || !errors.As(err, &context.DeadlineExceeded) {
+	if err == nil || !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("Client.GetActionOutput(%+v) should've returned context deadline error", action)
 	}
 }
