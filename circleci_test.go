@@ -2,6 +2,8 @@ package circleci
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,6 +13,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 var (
@@ -101,9 +104,25 @@ func TestClient_request(t *testing.T) {
 		fmt.Fprint(w, `{"login": "jszwedko"}`)
 	})
 
-	err := client.request("GET", "/me", &User{}, nil, nil)
+	err := client.request(context.Background(), "GET", "/me", &User{}, nil, nil)
 	if err != nil {
 		t.Errorf(`Client.request("GET", "/me", &User{}, nil, nil) errored with %s`, err)
+	}
+}
+
+func TestClientWithContext_request(t *testing.T) {
+	setup()
+	defer teardown()
+	client.Token = "ABCD"
+	mux.HandleFunc("/me", func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(1 * time.Second)
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 0*time.Microsecond)
+	defer cancel()
+	err := client.request(ctx, "GET", "/me", &User{}, nil, nil)
+	if err == nil || !errors.Is(err, context.DeadlineExceeded) {
+		t.Error(`Client.request("GET", "/me", &User{}, nil, nil) didn't cancel request on timeout`)
 	}
 }
 
@@ -121,7 +140,7 @@ func TestClient_requestOverridesCircleToken(t *testing.T) {
 	values := url.Values{}
 	values.Set("circle-token", "pre-existing")
 
-	err := client.request("GET", "/me", &User{}, values, nil)
+	err := client.request(context.Background(), "GET", "/me", &User{}, values, nil)
 	if err != nil {
 		t.Errorf(`Client.request("GET", "/me", &User{}, nil, nil) errored with %s`, err)
 	}
@@ -142,7 +161,7 @@ func TestClient_request_withDebug(t *testing.T) {
 		fmt.Fprint(w, `{"login": "jszwedko"}`)
 	})
 
-	err := client.request("GET", "/me", &User{}, nil, nil)
+	err := client.request(context.Background(), "GET", "/me", &User{}, nil, nil)
 	if err != nil {
 		t.Errorf(`Client.request("GET", "/me", &User{}, nil, nil) errored with %s`, err)
 	}
@@ -174,7 +193,7 @@ func TestClient_request_unauthenticated(t *testing.T) {
 		fmt.Fprint(w, `{"message": "You must log in first"}`)
 	})
 
-	err := client.request("GET", "/me", &User{}, nil, nil)
+	err := client.request(context.Background(), "GET", "/me", &User{}, nil, nil)
 	testAPIError(t, err, http.StatusUnauthorized, "You must log in first")
 }
 
@@ -186,7 +205,7 @@ func TestClient_request_noErrorMessage(t *testing.T) {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 
-	err := client.request("GET", "/me", &User{}, nil, nil)
+	err := client.request(context.Background(), "GET", "/me", &User{}, nil, nil)
 	testAPIError(t, err, http.StatusInternalServerError, "")
 }
 
@@ -424,18 +443,18 @@ func TestClient_recentBuilds_multiPage(t *testing.T) {
 		case 0:
 			testQueryIncludes(t, r, "offset", "0")
 			testQueryIncludes(t, r, "limit", "100")
-			fmt.Fprint(w, fmt.Sprintf("[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 100), ",")))
+			fmt.Fprintf(w, "[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 100), ","))
 		case 1:
 			testQueryIncludes(t, r, "offset", "100")
 			testQueryIncludes(t, r, "limit", "99")
-			fmt.Fprint(w, fmt.Sprintf("[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 99), ",")))
+			fmt.Fprintf(w, "[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 99), ","))
 		default:
 			t.Errorf("Client.ListRecentBuilds(%+v, %+v) made more than two requests to /recent-builds", 199, 0)
 		}
 		requestCount++
 	})
 
-	builds, err := client.recentBuilds("recent-builds", nil, 199, 0)
+	builds, err := client.recentBuilds(context.Background(), "recent-builds", nil, 199, 0)
 	if err != nil {
 		t.Errorf("Client.ListRecentBuilds(%+v, %+v) returned error: %v", 199, 0, err)
 	}
@@ -453,10 +472,10 @@ func TestClient_recentBuilds_multiPageExhausted(t *testing.T) {
 		testMethod(t, r, "GET")
 		testQueryIncludes(t, r, "offset", "0")
 		testQueryIncludes(t, r, "limit", "100")
-		fmt.Fprint(w, fmt.Sprintf("[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 50), ",")))
+		fmt.Fprintf(w, "[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 50), ","))
 	})
 
-	builds, err := client.recentBuilds("recent-builds", nil, 199, 0)
+	builds, err := client.recentBuilds(context.Background(), "recent-builds", nil, 199, 0)
 	if err != nil {
 		t.Errorf("Client.ListRecentBuilds(%+v, %+v) returned error: %v", 199, 0, err)
 	}
@@ -478,18 +497,18 @@ func TestClient_recentBuilds_multiPageNoLimit(t *testing.T) {
 		case 0:
 			testQueryIncludes(t, r, "offset", "0")
 			testQueryIncludes(t, r, "limit", "100")
-			fmt.Fprint(w, fmt.Sprintf("[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 100), ",")))
+			fmt.Fprintf(w, "[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 100), ","))
 		case 1:
 			testQueryIncludes(t, r, "offset", "100")
 			testQueryIncludes(t, r, "limit", "100")
-			fmt.Fprint(w, fmt.Sprintf("[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 99), ",")))
+			fmt.Fprintf(w, "[%s]", strings.Trim(strings.Repeat(`{"build_num": 123},`, 99), ","))
 		default:
 			t.Errorf("Client.ListRecentBuilds(%+v, %+v) made more than two requests to /recent-builds", -1, 0)
 		}
 		requestCount++
 	})
 
-	builds, err := client.recentBuilds("recent-builds", nil, -1, 0)
+	builds, err := client.recentBuilds(context.Background(), "recent-builds", nil, -1, 0)
 	if err != nil {
 		t.Errorf("Client.ListRecentBuilds(%+v, %+v) returned error: %v", -1, 0, err)
 	}
@@ -531,7 +550,7 @@ func TestClient_ListRecentBuildsForProject(t *testing.T) {
 		fmt.Fprint(w, `[{"build_num": 123}, {"build_num": 124}]`)
 	})
 
-	call := fmt.Sprintf("Client.ListRecentBuilds(foo, bar, master, running, 10, 0)")
+	call := "Client.ListRecentBuilds(foo, bar, master, running, 10, 0)"
 
 	builds, err := client.ListRecentBuildsForProject(VcsTypeGithub, "foo", "bar", "master", "running", 10, 0)
 	if err != nil {
@@ -555,7 +574,7 @@ func TestClient_ListRecentBuildsForProject_noBranch(t *testing.T) {
 		fmt.Fprint(w, `[{"build_num": 123}, {"build_num": 124}]`)
 	})
 
-	call := fmt.Sprintf("Client.ListRecentBuilds(foo, bar, , running, 10, 0)")
+	call := "Client.ListRecentBuilds(foo, bar, , running, 10, 0)"
 
 	builds, err := client.ListRecentBuildsForProject(VcsTypeGithub, "foo", "bar", "", "running", 10, 0)
 	if err != nil {
@@ -965,6 +984,24 @@ func TestClient_GetActionOutput_noOutput(t *testing.T) {
 
 	if outputs != nil {
 		t.Errorf("Client.GetActionOutput(%+v) returned %+v: want %v", action, outputs, nil)
+	}
+}
+
+func TestClient_GetActionOutput_withContext(t *testing.T) {
+	setup()
+	defer teardown()
+	mux.HandleFunc("/some-s3-path", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprintf(w, `[{"Message":"hello"}, {"Message": "world"}]`)
+	})
+
+	action := &Action{HasOutput: true, OutputURL: server.URL + "/some-s3-path"}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 0*time.Microsecond)
+	defer cancel()
+	_, err := client.GetActionOutputsWithContext(ctx, action)
+	if err == nil || !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("Client.GetActionOutput(%+v) should've returned context deadline error", action)
 	}
 }
 
