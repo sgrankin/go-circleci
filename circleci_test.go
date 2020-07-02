@@ -318,11 +318,11 @@ func TestClient_EnableProject(t *testing.T) {
 func TestClient_DisableProject(t *testing.T) {
 	setup()
 	defer teardown()
-	mux.HandleFunc("/project/org-name/repo-name/enable", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/project/github/org-name/repo-name/enable", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "DELETE")
 	})
 
-	err := client.DisableProject("org-name", "repo-name")
+	err := client.DisableProject(VcsTypeGithub, "org-name", "repo-name")
 	if err != nil {
 		t.Errorf("Client.EnableProject() returned error: %v", err)
 	}
@@ -350,12 +350,12 @@ func TestClient_FollowProject(t *testing.T) {
 func TestClient_UnfollowProject(t *testing.T) {
 	setup()
 	defer teardown()
-	mux.HandleFunc("/project/org-name/repo-name/unfollow", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/project/github/org-name/repo-name/unfollow", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "POST")
 		fmt.Fprint(w, `{"reponame": "repo-name"}`)
 	})
 
-	project, err := client.UnfollowProject("org-name", "repo-name")
+	project, err := client.UnfollowProject(VcsTypeGithub, "org-name", "repo-name")
 	if err != nil {
 		t.Errorf("Client.UnfollowProject() returned error: %v", err)
 	}
@@ -1009,7 +1009,7 @@ func TestClient_ListCheckoutKeys(t *testing.T) {
 	setup()
 	defer teardown()
 
-	mux.HandleFunc("/project/jszwedko/foo/checkout-key", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/project/github/jszwedko/foo/checkout-key", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
 		fmt.Fprintf(w, `[{
 			"public_key": "some public key",
@@ -1020,7 +1020,7 @@ func TestClient_ListCheckoutKeys(t *testing.T) {
 		}]`)
 	})
 
-	checkoutKeys, err := client.ListCheckoutKeys("jszwedko", "foo")
+	checkoutKeys, err := client.ListCheckoutKeys(VcsTypeGithub, "jszwedko", "foo")
 	if err != nil {
 		t.Errorf("Client.ListCheckoutKeys(jszwedko, foo) returned error: %v", err)
 	}
@@ -1122,12 +1122,12 @@ func TestClient_AddSSHUser(t *testing.T) {
 	setup()
 	defer teardown()
 
-	mux.HandleFunc("/project/jszwedko/foo/123/ssh-users", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/project/github/jszwedko/foo/123/ssh-users", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "POST")
 		fmt.Fprint(w, `{"ssh_users": [{"github_id": 1234, "login": "jszwedko"}]}`)
 	})
 
-	build, err := client.AddSSHUser("jszwedko", "foo", 123)
+	build, err := client.AddSSHUser(VcsTypeGithub, "jszwedko", "foo", 123)
 	if err != nil {
 		t.Errorf("Client.AddSSHUser(jszwedko, foo, 123) returned error: %v", err)
 	}

@@ -230,14 +230,14 @@ func (c *Client) EnableProjectWithContext(ctx context.Context, vcsType VcsType, 
 }
 
 // DisableProject disables a project
-func (c *Client) DisableProject(account, repo string) error {
-	return c.DisableProjectWithContext(context.Background(), account, repo)
+func (c *Client) DisableProject(vcsType VcsType, account, repo string) error {
+	return c.DisableProjectWithContext(context.Background(), vcsType, account, repo)
 }
 
 // DisableProjectWithContext is the same as DisableProject with the addition of the context
 // parameter that would be used to request cancellation.
-func (c *Client) DisableProjectWithContext(ctx context.Context, account, repo string) error {
-	return c.request(ctx, "DELETE", fmt.Sprintf("project/%s/%s/enable", account, repo), nil, nil, nil)
+func (c *Client) DisableProjectWithContext(ctx context.Context, vcsType VcsType, account, repo string) error {
+	return c.request(ctx, "DELETE", fmt.Sprintf("project/%s/%s/%s/enable", vcsType, account, repo), nil, nil, nil)
 }
 
 // FollowProject follows a project
@@ -263,16 +263,16 @@ func (c *Client) FollowProjectWithContext(ctx context.Context, vcsType VcsType, 
 }
 
 // UnfollowProject unfollows a project
-func (c *Client) UnfollowProject(account, repo string) (*Project, error) {
-	return c.UnfollowProjectWithContext(context.Background(), account, repo)
+func (c *Client) UnfollowProject(vcsType VcsType, account, repo string) (*Project, error) {
+	return c.UnfollowProjectWithContext(context.Background(), vcsType, account, repo)
 }
 
 // UnfollowProjectWithContext is the same as UnfollowProject with the addition of the context
 // parameter that would be used to request cancellation.
-func (c *Client) UnfollowProjectWithContext(ctx context.Context, account, repo string) (*Project, error) {
+func (c *Client) UnfollowProjectWithContext(ctx context.Context, vcsType VcsType, account, repo string) (*Project, error) {
 	project := &Project{}
 
-	err := c.request(ctx, "POST", fmt.Sprintf("project/%s/%s/unfollow", account, repo), project, nil, nil)
+	err := c.request(ctx, "POST", fmt.Sprintf("project/%s/%s/%s/unfollow", vcsType, account, repo), project, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -441,16 +441,16 @@ func (c *Client) ListTestMetadataWithContext(ctx context.Context, vcsType VcsTyp
 // SSH users for a build.
 //
 // The API token being used must be a user API token
-func (c *Client) AddSSHUser(account, repo string, buildNum int) (*Build, error) {
-	return c.AddSSHUserWithContext(context.Background(), account, repo, buildNum)
+func (c *Client) AddSSHUser(vcsType VcsType, account, repo string, buildNum int) (*Build, error) {
+	return c.AddSSHUserWithContext(context.Background(), vcsType, account, repo, buildNum)
 }
 
 // AddSSHUserWithContext is the same as AddSSHUser with the addition of the context
 // parameter that would be used to request cancellation.
-func (c *Client) AddSSHUserWithContext(ctx context.Context, account, repo string, buildNum int) (*Build, error) {
+func (c *Client) AddSSHUserWithContext(ctx context.Context, vcsType VcsType, account, repo string, buildNum int) (*Build, error) {
 	build := &Build{}
 
-	err := c.request(ctx, "POST", fmt.Sprintf("project/%s/%s/%d/ssh-users", account, repo, buildNum), build, nil, nil)
+	err := c.request(ctx, "POST", fmt.Sprintf("project/%s/%s/%s/%d/ssh-users", vcsType, account, repo, buildNum), build, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -754,16 +754,16 @@ func (c *Client) GetActionOutputsWithContext(ctx context.Context, a *Action) ([]
 }
 
 // ListCheckoutKeys fetches the checkout keys associated with the given project
-func (c *Client) ListCheckoutKeys(account, repo string) ([]*CheckoutKey, error) {
-	return c.ListCheckoutKeysWithContext(context.Background(), account, repo)
+func (c *Client) ListCheckoutKeys(vcsType VcsType, account, repo string) ([]*CheckoutKey, error) {
+	return c.ListCheckoutKeysWithContext(context.Background(), vcsType, account, repo)
 }
 
 // ListCheckoutKeysWithContext is the same as ListCheckoutKeys with the addition of the context
 // parameter that would be used to request cancellation.
-func (c *Client) ListCheckoutKeysWithContext(ctx context.Context, account, repo string) ([]*CheckoutKey, error) {
+func (c *Client) ListCheckoutKeysWithContext(ctx context.Context, vcsType VcsType, account, repo string) ([]*CheckoutKey, error) {
 	checkoutKeys := []*CheckoutKey{}
 
-	err := c.request(ctx, "GET", fmt.Sprintf("project/%s/%s/checkout-key", account, repo), &checkoutKeys, nil, nil)
+	err := c.request(ctx, "GET", fmt.Sprintf("project/%s/%s/%s/checkout-key", vcsType, account, repo), &checkoutKeys, nil, nil)
 	if err != nil {
 		return nil, err
 	}
