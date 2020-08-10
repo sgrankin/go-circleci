@@ -36,7 +36,7 @@ func setup() {
 		panic(fmt.Sprintf("couldn't parse test server URL: %s", server.URL))
 	}
 
-	client = &Client{BaseURL: url}
+	client = &Client{BaseURL: url, Version: APIVersion11}
 }
 
 func teardown() {
@@ -1151,5 +1151,82 @@ func TestClient_AddHerokuKey(t *testing.T) {
 	err := client.AddHerokuKey("53433a12-9c99-11e5-97f5-1458d009721")
 	if err != nil {
 		t.Errorf("Client.AddHerokuKey(53433a12-9c99-11e5-97f5-1458d009721) returned error: %v", err)
+	}
+}
+
+func TestClient_TriggerPipeline(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/project/github/mattermost/mattermod/pipeline", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "POST")
+		testBody(t, r, `{"branch":"testbranch","tag":"","parameters":{"tbs_pr":"bar","tbs_sha":"foo"}}`)
+		fmt.Fprint(w, `{"id": "foo", "state": "running", "number": 1, "created_at": "2020-08-05T19:33:08Z"}`)
+	})
+	client.Version = APIVersion2
+	defer func() {
+		client.Version = APIVersion11
+	}()
+
+	params := map[string]interface{}{
+		"tbs_pr":  "bar",
+		"tbs_sha": "foo",
+	}
+	got, err := client.TriggerPipeline(VcsTypeGithub, "mattermost", "mattermod", "testbranch", "", params)
+	if err != nil {
+		t.Errorf("Client.TriggerPipeline(mattermost, mattermod) returned error: %v", err)
+		return
+	}
+
+	want := &Pipeline{
+		ID:        "foo",
+		State:     "running",
+		Number:    1,
+		CreatedAt: time.Date(2020, time.August, 5, 19, 33, 8, 0, time.UTC),
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Client.TriggerPipeline(mattermost, mattermod) returned %v, want %v", got, want)
+	}
+}
+
+func TestClient_GetPipelineWorkflow(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/pipeline/id/workflow", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, `{"items": [{	"pipeline_id": "id", "canceled_by": "someone", "id": "foo", "name": "CI",    "project_slug": "github/mattermost/mattermod", "errored_by": "someone", "status": "success", "started_by": "someone", "pipeline_number": 0, "created_at": "2020-08-05T19:33:08Z", "stopped_at": "2020-08-05T19:33:08Z"}], "next_page_token": "token"}`)
+	})
+	client.Version = APIVersion2
+	defer func() {
+		client.Version = APIVersion11
+	}()
+
+	got, err := client.GetPipelineWorkflow("id", "")
+	if err != nil {
+		t.Errorf("Client.GetPipeline(id, \"\") returned error: %v", err)
+		return
+	}
+
+	want := &WorkflowList{
+		Items: []WorkflowItem{
+			{
+				ID:          "id",
+				CanceledBy:  "someone",
+				WorkflowID:  "foo",
+				Name:        "CI",
+				ProjectSlug: "github/mattermost/mattermod",
+				ErroredBy:   "someone",
+				Status:      "success",
+				StartedBy:   "someone",
+				Number:      0,
+				CreatedAt:   time.Date(2020, time.August, 5, 19, 33, 8, 0, time.UTC),
+				StoppedAt:   time.Date(2020, time.August, 5, 19, 33, 8, 0, time.UTC),
+			},
+		},
+		NextPageToken: "token",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Client.GetPipeline(id, \"\") returned %+v, want %+v", got, want)
 	}
 }

@@ -22,8 +22,23 @@ const (
 
 var (
 	defaultBaseURL = &url.URL{Host: "circleci.com", Scheme: "https", Path: "/api/v1.1/"}
+	baseURLV2      = &url.URL{Host: "circleci.com", Scheme: "https", Path: "/api/v2/"}
 	defaultLogger  = log.New(os.Stderr, "", log.LstdFlags)
 )
+
+// APIVersion denotes the version of the API to be used by the client.
+type APIVersion uint8
+
+const (
+	APIVersionNone APIVersion = iota
+	APIVersion11
+	APIVersion2
+)
+
+// String returns a string form of the version.
+func (v APIVersion) String() string {
+	return [...]string{"none", "APIv1.1", "APIv2"}[v]
+}
 
 // Logger is a minimal interface for injecting custom logging logic for debug logs
 type Logger interface {
@@ -40,6 +55,18 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("%d: %s", e.HTTPStatusCode, e.Message)
 }
 
+type InvalidVersionError struct {
+	version APIVersion
+}
+
+func (e *InvalidVersionError) Error() string {
+	return fmt.Sprintf("incorrect version: %s", e.version)
+}
+
+func newInvalidVersionError(version APIVersion) *InvalidVersionError {
+	return &InvalidVersionError{version: version}
+}
+
 // Client is a CircleCI client
 // Its zero value is a usable client for examining public CircleCI repositories
 type Client struct {
@@ -47,8 +74,27 @@ type Client struct {
 	Token      string       // CircleCI API token (needed for private repositories and mutative actions)
 	HTTPClient *http.Client // HTTPClient to use for connecting to CircleCI (defaults to http.DefaultClient)
 
-	Debug  bool   // debug logging enabled
-	Logger Logger // logger to send debug messages on (if enabled), defaults to logging to stderr with the standard flags
+	Debug   bool   // debug logging enabled
+	Logger  Logger // logger to send debug messages on (if enabled), defaults to logging to stderr with the standard flags
+	Version APIVersion
+}
+
+// NewClient returns a new CircleCI client by settings the baseURL depending on the API version passed.
+func NewClient(token string, version APIVersion) (*Client, error) {
+	var baseURL *url.URL
+	switch version {
+	case APIVersion11:
+		baseURL = defaultBaseURL
+	case APIVersion2:
+		baseURL = baseURLV2
+	default:
+		return nil, newInvalidVersionError(version)
+	}
+	return &Client{
+		Token:   token,
+		BaseURL: baseURL,
+		Version: version,
+	}, nil
 }
 
 func (c *Client) baseURL() *url.URL {
@@ -133,6 +179,7 @@ func (c *Client) request(ctx context.Context, method, path string, responseStruc
 
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Circle-Token", c.Token)
 
 	c.debugRequest(req)
 
@@ -179,6 +226,9 @@ func (c *Client) request(ctx context.Context, method, path string, responseStruc
 
 // Me returns information about the current user
 func (c *Client) MeWithContext(ctx context.Context) (*User, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	user := &User{}
 
 	err := c.request(context.Background(), "GET", "me", user, nil, nil)
@@ -201,6 +251,9 @@ func (c *Client) ListProjects() ([]*Project, error) {
 // ListProjectsWithContext is the same as ListProjects with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) ListProjectsWithContext(ctx context.Context) ([]*Project, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	projects := []*Project{}
 
 	err := c.request(ctx, "GET", "projects", &projects, nil, nil)
@@ -226,6 +279,9 @@ func (c *Client) EnableProject(vcsType VcsType, account, repo string) error {
 // EnableProjectWithContext is the same as EnableProject with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) EnableProjectWithContext(ctx context.Context, vcsType VcsType, account, repo string) error {
+	if c.Version < APIVersion11 {
+		return newInvalidVersionError(c.Version)
+	}
 	return c.request(ctx, "POST", fmt.Sprintf("project/%s/%s/%s/enable", vcsType, account, repo), nil, nil, nil)
 }
 
@@ -237,6 +293,9 @@ func (c *Client) DisableProject(vcsType VcsType, account, repo string) error {
 // DisableProjectWithContext is the same as DisableProject with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) DisableProjectWithContext(ctx context.Context, vcsType VcsType, account, repo string) error {
+	if c.Version < APIVersion11 {
+		return newInvalidVersionError(c.Version)
+	}
 	return c.request(ctx, "DELETE", fmt.Sprintf("project/%s/%s/%s/enable", vcsType, account, repo), nil, nil, nil)
 }
 
@@ -248,6 +307,9 @@ func (c *Client) FollowProject(vcsType VcsType, account, repo string) (*Project,
 // FollowProjectWithContext is the same as FollowProject with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) FollowProjectWithContext(ctx context.Context, vcsType VcsType, account, repo string) (*Project, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	project := &Project{}
 
 	err := c.request(ctx, "POST", fmt.Sprintf("project/%s/%s/%s/follow", vcsType, account, repo), project, nil, nil)
@@ -270,6 +332,9 @@ func (c *Client) UnfollowProject(vcsType VcsType, account, repo string) (*Projec
 // UnfollowProjectWithContext is the same as UnfollowProject with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) UnfollowProjectWithContext(ctx context.Context, vcsType VcsType, account, repo string) (*Project, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	project := &Project{}
 
 	err := c.request(ctx, "POST", fmt.Sprintf("project/%s/%s/%s/unfollow", vcsType, account, repo), project, nil, nil)
@@ -293,6 +358,9 @@ func (c *Client) GetProject(account, repo string) (*Project, error) {
 // GetProjectWithContext is the same as GetProject with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) GetProjectWithContext(ctx context.Context, account, repo string) (*Project, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	projects, err := c.ListProjectsWithContext(ctx)
 	if err != nil {
 		return nil, err
@@ -355,6 +423,9 @@ func (c *Client) ListRecentBuilds(limit, offset int) ([]*Build, error) {
 // ListRecentBuildsWithContext is the same as ListRecentBuilds with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) ListRecentBuildsWithContext(ctx context.Context, limit, offset int) ([]*Build, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	return c.recentBuilds(ctx, "recent-builds", nil, limit, offset)
 }
 
@@ -368,6 +439,9 @@ func (c *Client) ListRecentBuildsForProject(vcsType VcsType, account, repo, bran
 // ListRecentBuildsForProjectWithContext is the same as ListRecentBuildsForProject with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) ListRecentBuildsForProjectWithContext(ctx context.Context, vcsType VcsType, account, repo, branch, status string, limit, offset int) ([]*Build, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	path := fmt.Sprintf("project/%s/%s/%s", vcsType, account, repo)
 	if branch != "" {
 		path = fmt.Sprintf("%s/tree/%s", path, branch)
@@ -389,6 +463,9 @@ func (c *Client) GetBuild(vcsType VcsType, account, repo string, buildNum int) (
 // GetBuildWithContext is the same as GetBuild with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) GetBuildWithContext(ctx context.Context, vcsType VcsType, account, repo string, buildNum int) (*Build, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	build := &Build{}
 
 	err := c.request(ctx, "GET", fmt.Sprintf("project/%s/%s/%s/%d", vcsType, account, repo, buildNum), build, nil, nil)
@@ -407,6 +484,9 @@ func (c *Client) ListBuildArtifacts(vcsType VcsType, account, repo string, build
 // ListBuildArtifactsWithContext is the same as ListBuildArtifacts with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) ListBuildArtifactsWithContext(ctx context.Context, vcsType VcsType, account, repo string, buildNum int) ([]*Artifact, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	var artifacts []*Artifact
 
 	err := c.request(ctx, "GET", fmt.Sprintf("project/%s/%s/%s/%d/artifacts", vcsType, account, repo, buildNum), &artifacts, nil, nil)
@@ -425,6 +505,9 @@ func (c *Client) ListTestMetadata(vcsType VcsType, account, repo string, buildNu
 // ListTestMetadataWithContext is the same as ListTestMetadata with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) ListTestMetadataWithContext(ctx context.Context, vcsType VcsType, account, repo string, buildNum int) ([]*TestMetadata, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	metadata := struct {
 		Tests []*TestMetadata `json:"tests"`
 	}{}
@@ -448,6 +531,9 @@ func (c *Client) AddSSHUser(vcsType VcsType, account, repo string, buildNum int)
 // AddSSHUserWithContext is the same as AddSSHUser with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) AddSSHUserWithContext(ctx context.Context, vcsType VcsType, account, repo string, buildNum int) (*Build, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	build := &Build{}
 
 	err := c.request(ctx, "POST", fmt.Sprintf("project/%s/%s/%s/%d/ssh-users", vcsType, account, repo, buildNum), build, nil, nil)
@@ -482,6 +568,9 @@ func (c *Client) ParameterizedBuild(vcsType VcsType, account, repo, branch strin
 // ParametrizedBuildWithContext is the same as ParametrizedBuild with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) ParameterizedBuildWithContext(ctx context.Context, vcsType VcsType, account, repo, branch string, buildParameters map[string]string) (*Build, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	opts := map[string]interface{}{"build_parameters": buildParameters}
 	return c.BuildOptsWithContext(ctx, vcsType, account, repo, branch, opts)
 }
@@ -497,6 +586,9 @@ func (c *Client) BuildOpts(vcsType VcsType, account, repo, branch string, opts m
 // BuildOptsWithContext is the same as BuildOpts with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) BuildOptsWithContext(ctx context.Context, vcsType VcsType, account, repo, branch string, opts map[string]interface{}) (*Build, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	build := &Build{}
 
 	err := c.request(ctx, "POST", fmt.Sprintf("project/%s/%s/%s/tree/%s", vcsType, account, repo, branch), build, nil, opts)
@@ -519,6 +611,9 @@ func (c *Client) BuildByProjectBranch(vcsType VcsType, account, repo, branch str
 // BuildByProjectBranchWithContext is the same as BuildByProjectBranch with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) BuildByProjectBranchWithContext(ctx context.Context, vcsType VcsType, account, repo, branch string) error {
+	if c.Version < APIVersion11 {
+		return newInvalidVersionError(c.Version)
+	}
 	return c.buildProject(ctx, vcsType, account, repo, map[string]interface{}{
 		"branch": branch,
 	})
@@ -536,6 +631,9 @@ func (c *Client) BuildByProjectRevision(vcsType VcsType, account string, repo st
 // BuildByProjectRevisionWithContext is the same as BuildByProjectRevision with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) BuildByProjectRevisionWithContext(ctx context.Context, vcsType VcsType, account, repo, revision string) error {
+	if c.Version < APIVersion11 {
+		return newInvalidVersionError(c.Version)
+	}
 	return c.buildProject(ctx, vcsType, account, repo, map[string]interface{}{
 		"revision": revision,
 	})
@@ -553,6 +651,9 @@ func (c *Client) BuildByProjectTag(vcsType VcsType, account, repo, tag string) e
 // BuildByProjectTagWithContext is the same as BuildByProjectTag with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) BuildByProjectTagWithContext(ctx context.Context, vcsType VcsType, account, repo, tag string) error {
+	if c.Version < APIVersion11 {
+		return newInvalidVersionError(c.Version)
+	}
 	return c.buildProject(ctx, vcsType, account, repo, map[string]interface{}{
 		"tag": tag,
 	})
@@ -577,6 +678,9 @@ func (c *Client) BuildByProject(vcsType VcsType, account string, repo string, op
 // BuildByProjectWithContext is the same as BuildByProject with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) BuildByProjectWithContext(ctx context.Context, vcsType VcsType, account, repo string, opts map[string]interface{}) error {
+	if c.Version < APIVersion11 {
+		return newInvalidVersionError(c.Version)
+	}
 	return c.buildProject(ctx, vcsType, account, repo, opts)
 }
 
@@ -603,6 +707,9 @@ func (c *Client) RetryBuild(vcsType VcsType, account, repo string, buildNum int)
 // RetryBuildWithContext is the same as RetryBuild with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) RetryBuildWithContext(ctx context.Context, vcsType VcsType, account, repo string, buildNum int) (*Build, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	build := &Build{}
 
 	err := c.request(ctx, "POST", fmt.Sprintf("project/%s/%s/%s/%d/retry", vcsType, account, repo, buildNum), build, nil, nil)
@@ -622,6 +729,9 @@ func (c *Client) CancelBuild(vcsType VcsType, account, repo string, buildNum int
 // CancelBuildWithContext is the same as CancelBuild with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) CancelBuildWithContext(ctx context.Context, vcsType VcsType, account, repo string, buildNum int) (*Build, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	build := &Build{}
 
 	err := c.request(ctx, "POST", fmt.Sprintf("project/%s/%s/%s/%d/cancel", vcsType, account, repo, buildNum), build, nil, nil)
@@ -641,6 +751,9 @@ func (c *Client) ClearCache(vcsType VcsType, account, repo string) (string, erro
 // ClearCacheWithContext is the same as ClearCache with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) ClearCacheWithContext(ctx context.Context, vcsType VcsType, account, repo string) (string, error) {
+	if c.Version < APIVersion11 {
+		return "", newInvalidVersionError(c.Version)
+	}
 	status := &struct {
 		Status string `json:"status"`
 	}{}
@@ -662,6 +775,9 @@ func (c *Client) AddEnvVar(vcsType VcsType, account, repo, name, value string) (
 // AddEnvVarWithContext is the same as AddEnvVar with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) AddEnvVarWithContext(ctx context.Context, vcsType VcsType, account, repo, name, value string) (*EnvVar, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	envVar := &EnvVar{}
 
 	err := c.request(ctx, "POST", fmt.Sprintf("project/%s/%s/%s/envvar", vcsType, account, repo), envVar, nil, &EnvVar{Name: name, Value: value})
@@ -681,6 +797,9 @@ func (c *Client) ListEnvVars(vcsType VcsType, account, repo string) ([]EnvVar, e
 // ListEnvVarsWithContext is the same as ListEnvVars with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) ListEnvVarsWithContext(ctx context.Context, vcsType VcsType, account, repo string) ([]EnvVar, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	envVar := []EnvVar{}
 
 	err := c.request(ctx, "GET", fmt.Sprintf("project/%s/%s/%s/envvar", vcsType, account, repo), &envVar, nil, nil)
@@ -699,6 +818,9 @@ func (c *Client) DeleteEnvVar(vcsType VcsType, account, repo, name string) error
 // DeleteEnvVarWithContext is the same as DeleteEnvVar with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) DeleteEnvVarWithContext(ctx context.Context, vcsType VcsType, account, repo, name string) error {
+	if c.Version < APIVersion11 {
+		return newInvalidVersionError(c.Version)
+	}
 	return c.request(ctx, "DELETE", fmt.Sprintf("project/%s/%s/%s/envvar/%s", vcsType, account, repo, name), nil, nil, nil)
 }
 
@@ -710,6 +832,9 @@ func (c *Client) AddSSHKey(vcsType VcsType, account, repo, hostname, privateKey 
 // AddSSHKeyWithContext is the same as AddSSHKey with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) AddSSHKeyWithContext(ctx context.Context, vcsType VcsType, account, repo, hostname, privateKey string) error {
+	if c.Version < APIVersion11 {
+		return newInvalidVersionError(c.Version)
+	}
 	key := &struct {
 		Hostname   string `json:"hostname"`
 		PrivateKey string `json:"private_key"`
@@ -726,6 +851,9 @@ func (c *Client) GetActionOutputs(a *Action) ([]*Output, error) {
 // GetActionOutputWithContext is the same as GetActionOutput with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) GetActionOutputsWithContext(ctx context.Context, a *Action) ([]*Output, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	if !a.HasOutput || a.OutputURL == "" {
 		return nil, nil
 	}
@@ -761,6 +889,9 @@ func (c *Client) ListCheckoutKeys(vcsType VcsType, account, repo string) ([]*Che
 // ListCheckoutKeysWithContext is the same as ListCheckoutKeys with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) ListCheckoutKeysWithContext(ctx context.Context, vcsType VcsType, account, repo string) ([]*CheckoutKey, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	checkoutKeys := []*CheckoutKey{}
 
 	err := c.request(ctx, "GET", fmt.Sprintf("project/%s/%s/%s/checkout-key", vcsType, account, repo), &checkoutKeys, nil, nil)
@@ -782,6 +913,9 @@ func (c *Client) CreateCheckoutKey(vcsType VcsType, account, repo, keyType strin
 // CreateCheckoutKeyWithContext is the same as CreateCheckoutKey with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) CreateCheckoutKeyWithContext(ctx context.Context, vcsType VcsType, account, repo, keyType string) (*CheckoutKey, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	checkoutKey := &CheckoutKey{}
 
 	body := struct {
@@ -804,6 +938,9 @@ func (c *Client) GetCheckoutKey(vcsType VcsType, account, repo, fingerprint stri
 // GetCheckoutKeyWithContext is the same as GetCheckoutKey with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) GetCheckoutKeyWithContext(ctx context.Context, vcsType VcsType, account, repo, fingerprint string) (*CheckoutKey, error) {
+	if c.Version < APIVersion11 {
+		return nil, newInvalidVersionError(c.Version)
+	}
 	checkoutKey := &CheckoutKey{}
 
 	err := c.request(ctx, "GET", fmt.Sprintf("project/%s/%s/%s/checkout-key/%s", vcsType, account, repo, fingerprint), &checkoutKey, nil, nil)
@@ -822,6 +959,9 @@ func (c *Client) DeleteCheckoutKey(vcsType VcsType, account, repo, fingerprint s
 // GetCheckoutKeyWithContext is the same as GetCheckoutKey with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) DeleteCheckoutKeyWithContext(ctx context.Context, vcsType VcsType, account, repo, fingerprint string) error {
+	if c.Version < APIVersion11 {
+		return newInvalidVersionError(c.Version)
+	}
 	return c.request(ctx, "DELETE", fmt.Sprintf("project/%s/%s/%s/checkout-key/%s", vcsType, account, repo, fingerprint), nil, nil, nil)
 }
 
@@ -839,11 +979,119 @@ func (c *Client) AddHerokuKey(key string) error {
 // AddHerokuKeyWithContext is the same as AddHerokuKey with the addition of the context
 // parameter that would be used to request cancellation.
 func (c *Client) AddHerokuKeyWithContext(ctx context.Context, key string) error {
+	if c.Version < APIVersion11 {
+		return newInvalidVersionError(c.Version)
+	}
 	body := struct {
 		APIKey string `json:"apikey"`
 	}{APIKey: key}
 
 	return c.request(ctx, "POST", "/user/heroku-key", nil, nil, body)
+}
+
+// Pipeline describes a pipeline object.
+type Pipeline struct {
+	// The unique ID of the pipeline.
+	ID string `json:"id"`
+	// The current state of the pipeline.
+	State string `json:"state"`
+	// The number of the pipeline.
+	Number int `json:"number"`
+	// The date and time the piepeline was created.
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// TriggerPipeline calls TriggerPipelineWithContext with context.Background.
+func (c *Client) TriggerPipeline(vcsType VcsType, account, repo, branch, tag string, params map[string]interface{}) (*Pipeline, error) {
+	return c.TriggerPipelineWithContext(context.Background(), vcsType, account, repo, branch, tag, params)
+}
+
+// TriggerPipeline triggers a new pipeline for the given project for the given branch or tag.
+// Note that branch and tag are mutually exclusive. It is not exactly specified in the documentation
+// which takes precendence when both are specified.
+// https://circleci.com/docs/api/v2/?shell#trigger-a-new-pipeline
+// Note that this is only available as a v2 API.
+func (c *Client) TriggerPipelineWithContext(ctx context.Context, vcsType VcsType, account, repo, branch, tag string, params map[string]interface{}) (*Pipeline, error) {
+	if c.Version < APIVersion2 {
+		return nil, newInvalidVersionError(c.Version)
+	}
+	p := &Pipeline{}
+	body := struct {
+		Branch     string                 `json:"branch"`
+		Tag        string                 `json:"tag"`
+		Parameters map[string]interface{} `json:"parameters"`
+	}{
+		Branch:     branch,
+		Tag:        tag,
+		Parameters: params,
+	}
+
+	err := c.request(ctx, http.MethodPost, fmt.Sprintf("project/%s/%s/%s/pipeline", vcsType, account, repo), &p, nil, body)
+	if err != nil {
+		return nil, err
+	}
+
+	return p, nil
+}
+
+// WorkflowItem represents a workflow.
+type WorkflowItem struct {
+	// The ID of the pipeline this workflow belongs to.
+	ID string `json:"pipeline_id"`
+	// The number of the pipeline this workflow belongs to.
+	Number int `json:"pipeline_number"`
+	// The current status of the workflow.
+	Status string `json:"status"`
+	// The unique ID of the workflow.
+	WorkflowID string `json:"id"`
+	// The name of the workflow.
+	Name string `json:"name"`
+	// The UUID of the person if it was canceled.
+	CanceledBy string `json:"canceled_by"`
+	// The UUID of the person if it was errored.
+	ErroredBy string `json:"errored_by"`
+	// The UUID of the person who started it.
+	StartedBy string `json:"started_by"`
+	// The project-slug of the pipeline this workflow belongs to.
+	ProjectSlug string `json:"project_slug"`
+	// The date and time the workflow was created.
+	CreatedAt time.Time `json:"created_at"`
+	// The date and time the workflow stopped.
+	StoppedAt time.Time `json:"stopped_at"`
+}
+
+// WorkflowList represents a list of workflow items.
+type WorkflowList struct {
+	// The list of workflow items.
+	Items []WorkflowItem `json:"items"`
+	// A token to pass as a page-token query parameter to return the next page of results.
+	NextPageToken string `json:"next_page_token"`
+}
+
+// GetPipelineWorkflow calls GetPipelineWorkflowWithContext with context.Background.
+func (c *Client) GetPipelineWorkflow(pipelineID, pageToken string) (*WorkflowList, error) {
+	return c.GetPipelineWorkflowWithContext(context.Background(), pipelineID, pageToken)
+}
+
+// GetPipelineWorkflowWithContext returns a list of paginated workflows by pipeline ID
+// https://circleci.com/docs/api/v2/?shell#get-a-pipeline-39-s-workflows
+// Note that this is only available as a v2 API.
+func (c *Client) GetPipelineWorkflowWithContext(ctx context.Context, pipelineID, pageToken string) (*WorkflowList, error) {
+	if c.Version < APIVersion2 {
+		return nil, newInvalidVersionError(c.Version)
+	}
+	wf := &WorkflowList{}
+
+	params := url.Values{}
+	if pageToken != "" {
+		params.Add("page-token", pageToken)
+	}
+	err := c.request(ctx, http.MethodGet, fmt.Sprintf("pipeline/%s/workflow", pipelineID), &wf, params, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return wf, nil
 }
 
 // EnvVar represents an environment variable
