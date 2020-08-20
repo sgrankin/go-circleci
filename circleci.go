@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -1015,6 +1016,11 @@ func (c *Client) TriggerPipelineWithContext(ctx context.Context, vcsType VcsType
 	if c.Version < APIVersion2 {
 		return nil, newInvalidVersionError(c.Version)
 	}
+
+	if branch != "" && tag != "" {
+		return nil, errors.New("branch and tag parameters are mutually exclusive. Please send just one")
+	}
+
 	p := &Pipeline{}
 	body := struct {
 		Branch     string                 `json:"branch,omitempty"`
