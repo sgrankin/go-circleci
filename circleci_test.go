@@ -1160,7 +1160,7 @@ func TestClient_TriggerPipeline(t *testing.T) {
 
 	mux.HandleFunc("/project/github/mattermost/mattermod/pipeline", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "POST")
-		testBody(t, r, `{"branch":"testbranch","tag":"","parameters":{"tbs_pr":"bar","tbs_sha":"foo"}}`)
+		testBody(t, r, `{"branch":"testbranch","parameters":{"tbs_pr":"bar","tbs_sha":"foo"}}`)
 		fmt.Fprint(w, `{"id": "foo", "state": "running", "number": 1, "created_at": "2020-08-05T19:33:08Z"}`)
 	})
 	client.Version = APIVersion2
