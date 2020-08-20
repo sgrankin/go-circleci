@@ -1017,8 +1017,8 @@ func (c *Client) TriggerPipelineWithContext(ctx context.Context, vcsType VcsType
 	}
 	p := &Pipeline{}
 	body := struct {
-		Branch     string                 `json:"branch"`
-		Tag        string                 `json:"tag"`
+		Branch     string                 `json:"branch,omitempty"`
+		Tag        string                 `json:"tag,omitempty"`
 		Parameters map[string]interface{} `json:"parameters"`
 	}{
 		Branch:     branch,
