@@ -1158,35 +1158,54 @@ func TestClient_TriggerPipeline(t *testing.T) {
 	setup()
 	defer teardown()
 
-	mux.HandleFunc("/project/github/mattermost/mattermod/pipeline", func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, "POST")
-		testBody(t, r, `{"branch":"testbranch","parameters":{"tbs_pr":"bar","tbs_sha":"foo"}}`)
-		fmt.Fprint(w, `{"id": "foo", "state": "running", "number": 1, "created_at": "2020-08-05T19:33:08Z"}`)
+	t.Run("should trigger a pipeline successfully", func(t *testing.T) {
+		mux.HandleFunc("/project/github/mattermost/mattermod/pipeline", func(w http.ResponseWriter, r *http.Request) {
+			testMethod(t, r, "POST")
+			testBody(t, r, `{"branch":"testbranch","parameters":{"tbs_pr":"bar","tbs_sha":"foo"}}`)
+			fmt.Fprint(w, `{"id": "foo", "state": "running", "number": 1, "created_at": "2020-08-05T19:33:08Z"}`)
+		})
+		client.Version = APIVersion2
+		defer func() {
+			client.Version = APIVersion11
+		}()
+
+		params := map[string]interface{}{
+			"tbs_pr":  "bar",
+			"tbs_sha": "foo",
+		}
+		got, err := client.TriggerPipeline(VcsTypeGithub, "mattermost", "mattermod", "testbranch", "", params)
+		if err != nil {
+			t.Errorf("Client.TriggerPipeline(mattermost, mattermod) returned error: %v", err)
+			return
+		}
+
+		want := &Pipeline{
+			ID:        "foo",
+			State:     "running",
+			Number:    1,
+			CreatedAt: time.Date(2020, time.August, 5, 19, 33, 8, 0, time.UTC),
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("Client.TriggerPipeline(mattermost, mattermod) returned %v, want %v", got, want)
+		}
 	})
-	client.Version = APIVersion2
-	defer func() {
-		client.Version = APIVersion11
-	}()
 
-	params := map[string]interface{}{
-		"tbs_pr":  "bar",
-		"tbs_sha": "foo",
-	}
-	got, err := client.TriggerPipeline(VcsTypeGithub, "mattermost", "mattermod", "testbranch", "", params)
-	if err != nil {
-		t.Errorf("Client.TriggerPipeline(mattermost, mattermod) returned error: %v", err)
-		return
-	}
+	t.Run("should fail to trigger a pipeline if we pass both branch an tag params", func(t *testing.T) {
+		client.Version = APIVersion2
+		defer func() {
+			client.Version = APIVersion11
+		}()
 
-	want := &Pipeline{
-		ID:        "foo",
-		State:     "running",
-		Number:    1,
-		CreatedAt: time.Date(2020, time.August, 5, 19, 33, 8, 0, time.UTC),
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("Client.TriggerPipeline(mattermost, mattermod) returned %v, want %v", got, want)
-	}
+		params := map[string]interface{}{
+			"tbs_pr":  "bar",
+			"tbs_sha": "foo",
+		}
+		_, err := client.TriggerPipeline(VcsTypeGithub, "mattermost", "mattermod", "testbranch", "testtag", params)
+		if err == nil {
+			t.Errorf("Client.TriggerPipeline(mattermost, mattermod) should have returned error")
+			return
+		}
+	})
 }
 
 func TestClient_GetPipelineWorkflow(t *testing.T) {
