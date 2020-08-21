@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -1007,18 +1008,23 @@ func (c *Client) TriggerPipeline(vcsType VcsType, account, repo, branch, tag str
 }
 
 // TriggerPipeline triggers a new pipeline for the given project for the given branch or tag.
-// Note that branch and tag are mutually exclusive. It is not exactly specified in the documentation
-// which takes precendence when both are specified.
+// Note that branch and tag are mutually exclusive and if both are sent circleci will return
+// an error
 // https://circleci.com/docs/api/v2/?shell#trigger-a-new-pipeline
 // Note that this is only available as a v2 API.
 func (c *Client) TriggerPipelineWithContext(ctx context.Context, vcsType VcsType, account, repo, branch, tag string, params map[string]interface{}) (*Pipeline, error) {
 	if c.Version < APIVersion2 {
 		return nil, newInvalidVersionError(c.Version)
 	}
+
+	if branch != "" && tag != "" {
+		return nil, errors.New("branch and tag parameters are mutually exclusive. Please send just one")
+	}
+
 	p := &Pipeline{}
 	body := struct {
-		Branch     string                 `json:"branch"`
-		Tag        string                 `json:"tag"`
+		Branch     string                 `json:"branch,omitempty"`
+		Tag        string                 `json:"tag,omitempty"`
 		Parameters map[string]interface{} `json:"parameters"`
 	}{
 		Branch:     branch,
