@@ -1072,6 +1072,32 @@ func (c *Client) GetPipelineByBranchWithContext(ctx context.Context, vcsType Vcs
 	return p, nil
 }
 
+// CancelWorkflow triggers a cancel of the specified workflow using CirclerCI apiV2
+// Returns a status message
+func (c *Client) CancelWorkflow(workflowID string) (*CancelWorkflow, error) {
+	return c.CancelWorkflowWithContext(context.Background(), workflowID)
+}
+
+// CancelWorkflowWithContext is the same as CancelWorkflow with the addition of the context
+// parameter that would be used to request cancellation.
+func (c *Client) CancelWorkflowWithContext(ctx context.Context, workflowID string) (*CancelWorkflow, error) {
+	if c.Version < APIVersion2 {
+		return nil, newInvalidVersionError(c.Version)
+	}
+	cancel := &CancelWorkflow{}
+
+	err := c.request(ctx, http.MethodPost, fmt.Sprintf("workflow/%s/cancel", workflowID), cancel, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return cancel, nil
+}
+
+type CancelWorkflow struct {
+	Message string `json:"message,omitempty"`
+}
+
 type Pipelines struct {
 	NextPageToken interface{} `json:"next_page_token,omitempty"`
 	Items         []Items     `json:"items"`

@@ -1346,3 +1346,30 @@ func TestClient_GetPipelineByBranch(t *testing.T) {
 		}
 	})
 }
+
+func TestClient_CancelWorkflow(t *testing.T) {
+	setup()
+	defer teardown()
+
+	client.Version = APIVersion2
+	defer func() {
+		client.Version = APIVersion11
+	}()
+
+	t.Run("should cancel a workflow successfully", func(t *testing.T) {
+		mux.HandleFunc("/workflow/123-abc-345/cancel", func(w http.ResponseWriter, r *http.Request) {
+			testMethod(t, r, "POST")
+			fmt.Fprint(w, `{"message": "Accepted."}`)
+		})
+
+		build, err := client.CancelWorkflow("123-abc-345")
+		if err != nil {
+			t.Errorf("Client.CancelWorkflow returned error: %v", err)
+		}
+
+		want := &CancelWorkflow{Message: "Accepted."}
+		if !reflect.DeepEqual(build, want) {
+			t.Errorf("Client.CancelBuild returned %+v, want %+v", build, want)
+		}
+	})
+}
