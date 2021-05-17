@@ -1062,7 +1062,7 @@ func (c *Client) GetPipelineByBranchWithContext(ctx context.Context, vcsType Vcs
 	if pageToken != "" {
 		params.Add("page-token", pageToken)
 	}
-	params.Add("branch", url.QueryEscape(branch))
+	params.Add("branch", branch)
 
 	err := c.request(ctx, http.MethodGet, fmt.Sprintf("project/%s/%s/%s/pipeline", vcsType, account, repo), &p, params, nil)
 	if err != nil {
