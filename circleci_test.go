@@ -1249,3 +1249,100 @@ func TestClient_GetPipelineWorkflow(t *testing.T) {
 		t.Errorf("Client.GetPipeline(id, \"\") returned %+v, want %+v", got, want)
 	}
 }
+
+func TestClient_GetPipelineByBranch(t *testing.T) {
+	setup()
+	defer teardown()
+
+	t.Run("should get a pipeline successfully", func(t *testing.T) {
+		mux.HandleFunc("/project/github/mattermost/mattermod/pipeline", func(w http.ResponseWriter, r *http.Request) {
+			testMethod(t, r, "GET")
+			testQueryIncludes(t, r, "branch", "testbranch")
+			fmt.Fprint(w, `{
+"next_page_token": null,
+"items": [
+	{
+		"id": "8c9c042e-c08d-4aa1-aee6-0f3810885b4e",
+		"errors": [],
+		"project_slug": "gh/mattermost/mattermod",
+		"updated_at": "2021-05-11T14:50:47.741Z",
+		"number": 24549,
+		"state": "created",
+		"created_at": "2021-05-11T14:50:47.741Z",
+		"trigger": {
+			"received_at": "2021-05-11T14:50:47.248Z",
+			"type": "api",
+			"actor": {
+				"login": "mattermost-build",
+				"avatar_url": "https://avatars.githubusercontent.com/u/10821961?v=4"
+			}
+		},
+		"vcs": {
+			"origin_repository_url": "https://github.com/mattermost/mattermod",
+			"target_repository_url": "https://github.com/mattermost/mattermod",
+			"revision": "f0b2f5fed6honk6911eafbc3bhonk1a2",
+			"provider_name": "GitHub",
+			"branch": "pull/17603"
+		}
+	}
+]
+}`)
+		})
+		client.Version = APIVersion2
+		defer func() {
+			client.Version = APIVersion11
+		}()
+
+		got, err := client.GetPipelineByBranch(VcsTypeGithub, "mattermost", "mattermod", "testbranch", "")
+		if err != nil {
+			t.Errorf("Client.GetPipelineByBranch(mattermost, mattermod) returned error: %v", err)
+			return
+		}
+
+		want := &Pipelines{
+			NextPageToken: nil,
+			Items: []Items{
+				{
+					ID:          "8c9c042e-c08d-4aa1-aee6-0f3810885b4e",
+					ProjectSlug: "gh/mattermost/mattermod",
+					UpdatedAt:   "2021-05-11T14:50:47.741Z",
+					Number:      24549,
+					State:       "created",
+					CreatedAt:   "2021-05-11T14:50:47.741Z",
+					Trigger: Trigger{
+						ReceivedAt: "2021-05-11T14:50:47.248Z",
+						Type:       "api",
+						Actor: Actor{
+							Login:     "mattermost-build",
+							AvatarURL: "https://avatars.githubusercontent.com/u/10821961?v=4",
+						},
+					},
+					Vcs: Vcs{
+						OriginRepositoryURL: "https://github.com/mattermost/mattermod",
+						TargetRepositoryURL: "https://github.com/mattermost/mattermod",
+						Revision:            "f0b2f5fed6honk6911eafbc3bhonk1a2",
+						ProviderName:        "GitHub",
+						Branch:              "pull/17603",
+					},
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("Client.TriggerPipeline(mattermost, mattermod) returned %v, want %v", got, want)
+		}
+	})
+
+	t.Run("should fail to get a pipeline if dont pass the branch", func(t *testing.T) {
+		client.Version = APIVersion2
+		defer func() {
+			client.Version = APIVersion11
+		}()
+
+		_, err := client.GetPipelineByBranch(VcsTypeGithub, "mattermost", "mattermod", "", "")
+		if err == nil {
+			t.Errorf("Client.GetPipelineByBranch(mattermost, mattermod) should have returned error")
+			return
+		}
+	})
+}

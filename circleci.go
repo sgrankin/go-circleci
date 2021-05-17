@@ -1040,6 +1040,73 @@ func (c *Client) TriggerPipelineWithContext(ctx context.Context, vcsType VcsType
 	return p, nil
 }
 
+// GetPipelineByBranch calls GetPipelineByBranchWithContext with context.Background.
+func (c *Client) GetPipelineByBranch(vcsType VcsType, account, repo, branch, pageToken string) (*Pipelines, error) {
+	return c.GetPipelineByBranchWithContext(context.Background(), vcsType, account, repo, branch, pageToken)
+}
+
+// GetPipelineByBranchWithContext gets a pipeline for the given project for the given branch.
+// https://circleci.com/docs/api/v2/#operation/listPipelinesForProject
+// Note that this is only available as a v2 API.
+func (c *Client) GetPipelineByBranchWithContext(ctx context.Context, vcsType VcsType, account, repo, branch, pageToken string) (*Pipelines, error) {
+	if c.Version < APIVersion2 {
+		return nil, newInvalidVersionError(c.Version)
+	}
+
+	if branch == "" {
+		return nil, errors.New("branch parameter is required.")
+	}
+
+	p := &Pipelines{}
+	params := url.Values{}
+	if pageToken != "" {
+		params.Add("page-token", pageToken)
+	}
+	params.Add("branch", url.QueryEscape(branch))
+
+	err := c.request(ctx, http.MethodGet, fmt.Sprintf("project/%s/%s/%s/pipeline", vcsType, account, repo), &p, params, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return p, nil
+}
+
+type Pipelines struct {
+	NextPageToken interface{} `json:"next_page_token,omitempty"`
+	Items         []Items     `json:"items"`
+}
+
+type Actor struct {
+	Login     string `json:"login"`
+	AvatarURL string `json:"avatar_url"`
+}
+
+type Trigger struct {
+	ReceivedAt string `json:"received_at"`
+	Type       string `json:"type"`
+	Actor      Actor  `json:"actor"`
+}
+
+type Vcs struct {
+	OriginRepositoryURL string `json:"origin_repository_url"`
+	TargetRepositoryURL string `json:"target_repository_url"`
+	Revision            string `json:"revision"`
+	ProviderName        string `json:"provider_name"`
+	Branch              string `json:"branch"`
+}
+
+type Items struct {
+	ID          string  `json:"id"`
+	ProjectSlug string  `json:"project_slug"`
+	UpdatedAt   string  `json:"updated_at"`
+	Number      int     `json:"number"`
+	State       string  `json:"state"`
+	CreatedAt   string  `json:"created_at"`
+	Trigger     Trigger `json:"trigger"`
+	Vcs         Vcs     `json:"vcs"`
+}
+
 // WorkflowItem represents a workflow.
 type WorkflowItem struct {
 	// The ID of the pipeline this workflow belongs to.
