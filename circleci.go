@@ -1040,12 +1040,12 @@ func (c *Client) TriggerPipelineWithContext(ctx context.Context, vcsType VcsType
 	return p, nil
 }
 
-// GetPipeline calls GetPipelineWithContext with context.Background.
+// GetPipelineByBranch calls GetPipelineByBranchWithContext with context.Background.
 func (c *Client) GetPipelineByBranch(vcsType VcsType, account, repo, branch, pageToken string) (*Pipelines, error) {
 	return c.GetPipelineByBranchWithContext(context.Background(), vcsType, account, repo, branch, pageToken)
 }
 
-// GetPipelineByBranchWithContext get a pipeline for the given project for the given branch.
+// GetPipelineByBranchWithContext gets a pipeline for the given project for the given branch.
 // https://circleci.com/docs/api/v2/#operation/listPipelinesForProject
 // Note that this is only available as a v2 API.
 func (c *Client) GetPipelineByBranchWithContext(ctx context.Context, vcsType VcsType, account, repo, branch, pageToken string) (*Pipelines, error) {
@@ -1054,7 +1054,7 @@ func (c *Client) GetPipelineByBranchWithContext(ctx context.Context, vcsType Vcs
 	}
 
 	if branch == "" {
-		return nil, errors.New("branch paramenter is required.")
+		return nil, errors.New("branch parameter is required.")
 	}
 
 	p := &Pipelines{}
