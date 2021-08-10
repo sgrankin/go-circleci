@@ -1104,6 +1104,14 @@ func (c *Client) CancelWorkflowWithContext(ctx context.Context, workflowID strin
 	return cancel, nil
 }
 
+func (c *Client) GetWorkflowJobs(ctx context.Context, workflowID string) (*JobList, error) {
+	if c.Version < APIVersion2 {
+		return nil, newInvalidVersionError(c.Version)
+	}
+	result := &JobList{}
+	return result, c.request(ctx, http.MethodGet, fmt.Sprintf("workflow/%s/job", workflowID), &result, nil, nil)
+}
+
 type CancelWorkflow struct {
 	Message string `json:"message,omitempty"`
 }
@@ -1184,6 +1192,44 @@ type WorkflowList struct {
 	Items []WorkflowItem `json:"items"`
 	// A token to pass as a page-token query parameter to return the next page of results.
 	NextPageToken string `json:"next_page_token"`
+}
+
+type JobStatus string
+
+const (
+	JobSuccess JobStatus = "success"
+	JobBlocked JobStatus = "blocked"
+	JobOnHold  JobStatus = "on_hold"
+	JobFailed  JobStatus = "failed"
+)
+
+type JobType string
+
+const (
+	JobBuild    JobType = "build"
+	JobApproval JobType = "approval"
+)
+
+type JobItem struct {
+	Number       int       `json:"job_number"`
+	ID           string    `json:"id"`
+	Name         string    `json:"name"`
+	ProjectSlug  string    `json:"project_slug"`
+	Status       JobStatus `json:"status"`
+	Type         string    `json:"type"`
+	Dependencies []string  `json:"dependencies"`
+
+	ApprovalRequestID string `json:"approval_request_id"`
+	ApprovedBy        string `json:"approved_by"`
+	CanceledBy        string `json:"canceled_by"`
+
+	StartedAt time.Time `json:"started_at"`
+	StoppedAt time.Time `json:"stopped_at"`
+}
+
+type JobList struct {
+	Items         []JobItem `json:"items"`
+	NextPageToken string    `json:"next_page_token"`
 }
 
 // GetPipelineWorkflow calls GetPipelineWorkflowWithContext with context.Background.
