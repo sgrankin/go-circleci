@@ -1336,19 +1336,6 @@ func TestClient_GetPipelineByBranch(t *testing.T) {
 			t.Errorf("Client.TriggerPipeline(mattermost, mattermod) returned %v, want %v", got, want)
 		}
 	})
-
-	t.Run("should fail to get a pipeline if dont pass the branch", func(t *testing.T) {
-		client.Version = APIVersion2
-		defer func() {
-			client.Version = APIVersion11
-		}()
-
-		_, err := client.GetPipelineByBranch(VcsTypeGithub, "mattermost", "mattermod", "", "")
-		if err == nil {
-			t.Errorf("Client.GetPipelineByBranch(mattermost, mattermod) should have returned error")
-			return
-		}
-	})
 }
 
 func TestClient_CancelWorkflow(t *testing.T) {

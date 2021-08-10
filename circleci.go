@@ -1040,6 +1040,10 @@ func (c *Client) TriggerPipelineWithContext(ctx context.Context, vcsType VcsType
 	return p, nil
 }
 
+func (c *Client) GetPipeline(ctx context.Context, vcsType VcsType, account, repo, pageToken string) (*Pipelines, error) {
+	return c.GetPipelineByBranchWithContext(ctx, vcsType, account, repo, "", pageToken)
+}
+
 // GetPipelineByBranch calls GetPipelineByBranchWithContext with context.Background.
 func (c *Client) GetPipelineByBranch(vcsType VcsType, account, repo, branch, pageToken string) (*Pipelines, error) {
 	return c.GetPipelineByBranchWithContext(context.Background(), vcsType, account, repo, branch, pageToken)
@@ -1053,16 +1057,14 @@ func (c *Client) GetPipelineByBranchWithContext(ctx context.Context, vcsType Vcs
 		return nil, newInvalidVersionError(c.Version)
 	}
 
-	if branch == "" {
-		return nil, errors.New("branch parameter is required.")
-	}
-
 	p := &Pipelines{}
 	params := url.Values{}
 	if pageToken != "" {
 		params.Add("page-token", pageToken)
 	}
-	params.Add("branch", branch)
+	if branch != "" {
+		params.Add("branch", branch)
+	}
 
 	err := c.request(ctx, http.MethodGet, fmt.Sprintf("project/%s/%s/%s/pipeline", vcsType, account, repo), &p, params, nil)
 	if err != nil {
