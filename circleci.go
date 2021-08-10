@@ -944,14 +944,14 @@ const (
 
 // WorkflowItem represents a workflow.
 type WorkflowItem struct {
-	// The ID of the pipeline this workflow belongs to.
-	ID string `json:"pipeline_id"`
+	// The PipelineID of the pipeline this workflow belongs to.
+	PipelineID string `json:"pipeline_id"`
 	// The number of the pipeline this workflow belongs to.
-	Number int `json:"pipeline_number"`
+	PipelineNumber int `json:"pipeline_number"`
 	// The current status of the workflow.
 	Status WorkflowStatus `json:"status"`
 	// The unique ID of the workflow.
-	WorkflowID string `json:"id"`
+	ID string `json:"id"`
 	// The name of the workflow.
 	Name string `json:"name"`
 	// The UUID of the person if it was canceled.
