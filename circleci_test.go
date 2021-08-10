@@ -44,6 +44,7 @@ func teardown() {
 }
 
 func testBody(t *testing.T, r *http.Request, want string) {
+	t.Helper()
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		t.Errorf("error reading request body: %v", err)
@@ -54,12 +55,14 @@ func testBody(t *testing.T, r *http.Request, want string) {
 }
 
 func testMethod(t *testing.T, r *http.Request, want string) {
+	t.Helper()
 	if got := r.Method; got != want {
 		t.Errorf("request method: %v, want %v", got, want)
 	}
 }
 
 func testAPIError(t *testing.T, err error, statusCode int, message string) {
+	t.Helper()
 	if err == nil {
 		t.Errorf("expected APIError but got nil")
 	}
@@ -75,6 +78,7 @@ func testAPIError(t *testing.T, err error, statusCode int, message string) {
 }
 
 func testQueryIncludes(t *testing.T, r *http.Request, key, value string) {
+	t.Helper()
 	query := r.URL.Query()
 	if len(query[key]) > 1 {
 		t.Errorf("query parameter %s set with multiple values: %#v", key, query[key])
