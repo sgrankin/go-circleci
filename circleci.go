@@ -1158,6 +1158,7 @@ const (
 	WorkflowOnHold  WorkflowStatus = "on_hold"
 	WorkflowFailed  WorkflowStatus = "failed"
 	WorkflowSuccess WorkflowStatus = "success"
+	WorkflowRunning WorkflowStatus = "running"
 )
 
 // WorkflowItem represents a workflow.
@@ -1201,6 +1202,7 @@ const (
 	JobBlocked JobStatus = "blocked"
 	JobOnHold  JobStatus = "on_hold"
 	JobFailed  JobStatus = "failed"
+	JobRunning JobStatus = "running"
 )
 
 type JobType string
