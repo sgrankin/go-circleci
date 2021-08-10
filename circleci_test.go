@@ -221,7 +221,7 @@ func TestClient_Me(t *testing.T) {
 		fmt.Fprint(w, `{"login": "jszwedko"}`)
 	})
 
-	me, err := client.Me()
+	me, err := client.Me(context.TODO())
 	if err != nil {
 		t.Errorf("Client.Me returned error: %v", err)
 	}
@@ -240,7 +240,7 @@ func TestClient_ListProjects(t *testing.T) {
 		fmt.Fprint(w, `[{"reponame": "foo"}]`)
 	})
 
-	projects, err := client.ListProjects()
+	projects, err := client.ListProjects(context.TODO())
 	if err != nil {
 		t.Errorf("Client.ListProjects() returned error: %v", err)
 	}
@@ -266,7 +266,7 @@ func TestClient_ListProjects_parseFeatureFlagsRaw(t *testing.T) {
 		`)
 	})
 
-	projects, err := client.ListProjects()
+	projects, err := client.ListProjects(context.TODO())
 	if err != nil {
 		t.Errorf("Client.ListProjects() returned error: %v", err)
 	}
@@ -292,7 +292,7 @@ func TestClient_ListProjects_parseNullableFeatureFlags(t *testing.T) {
 		`)
 	})
 
-	projects, err := client.ListProjects()
+	projects, err := client.ListProjects(context.TODO())
 	if err != nil {
 		t.Errorf("Client.ListProjects() returned error: %v", err)
 	}
@@ -313,7 +313,7 @@ func TestClient_EnableProject(t *testing.T) {
 		testMethod(t, r, "POST")
 	})
 
-	err := client.EnableProject(VcsTypeGithub, "org-name", "repo-name")
+	err := client.EnableProject(context.TODO(), VcsTypeGithub, "org-name", "repo-name")
 	if err != nil {
 		t.Errorf("Client.EnableProject() returned error: %v", err)
 	}
@@ -326,7 +326,7 @@ func TestClient_DisableProject(t *testing.T) {
 		testMethod(t, r, "DELETE")
 	})
 
-	err := client.DisableProject(VcsTypeGithub, "org-name", "repo-name")
+	err := client.DisableProject(context.TODO(), VcsTypeGithub, "org-name", "repo-name")
 	if err != nil {
 		t.Errorf("Client.EnableProject() returned error: %v", err)
 	}
@@ -340,7 +340,7 @@ func TestClient_FollowProject(t *testing.T) {
 		fmt.Fprint(w, `{"reponame": "repo-name"}`)
 	})
 
-	project, err := client.FollowProject(VcsTypeGithub, "org-name", "repo-name")
+	project, err := client.FollowProject(context.TODO(), VcsTypeGithub, "org-name", "repo-name")
 	if err != nil {
 		t.Errorf("Client.FollowProject() returned error: %v", err)
 	}
@@ -359,7 +359,7 @@ func TestClient_UnfollowProject(t *testing.T) {
 		fmt.Fprint(w, `{"reponame": "repo-name"}`)
 	})
 
-	project, err := client.UnfollowProject(VcsTypeGithub, "org-name", "repo-name")
+	project, err := client.UnfollowProject(context.TODO(), VcsTypeGithub, "org-name", "repo-name")
 	if err != nil {
 		t.Errorf("Client.UnfollowProject() returned error: %v", err)
 	}
@@ -382,7 +382,7 @@ func TestClient_GetProject(t *testing.T) {
 		]`)
 	})
 
-	project, err := client.GetProject("jszwedko", "foo")
+	project, err := client.GetProject(context.TODO(), "jszwedko", "foo")
 	if err != nil {
 		t.Errorf("Client.GetProject returned error: %v", err)
 	}
@@ -403,7 +403,7 @@ func TestClient_GetProject_noMatching(t *testing.T) {
 		]`)
 	})
 
-	project, err := client.GetProject("jszwedko", "foo")
+	project, err := client.GetProject(context.TODO(), "jszwedko", "foo")
 	if err != nil {
 		t.Errorf("Client.GetProject returned error: %v", err)
 	}
@@ -424,7 +424,7 @@ func TestClient_GetProject_urlDecodeBranches(t *testing.T) {
 		]`)
 	})
 
-	project, err := client.GetProject("jszwedko", "bar")
+	project, err := client.GetProject(context.TODO(), "jszwedko", "bar")
 	if err != nil {
 		t.Errorf("Client.GetProject returned error: %v", err)
 	}
@@ -532,7 +532,7 @@ func TestClient_ListRecentBuilds(t *testing.T) {
 		fmt.Fprint(w, `[{"build_num": 123}, {"build_num": 124}]`)
 	})
 
-	builds, err := client.ListRecentBuilds(10, 2)
+	builds, err := client.ListRecentBuilds(context.TODO(), 10, 2)
 	if err != nil {
 		t.Errorf("Client.ListRecentBuilds(%+v, %+v) returned error: %v", 10, 2, err)
 	}
@@ -556,7 +556,7 @@ func TestClient_ListRecentBuildsForProject(t *testing.T) {
 
 	call := "Client.ListRecentBuilds(foo, bar, master, running, 10, 0)"
 
-	builds, err := client.ListRecentBuildsForProject(VcsTypeGithub, "foo", "bar", "master", "running", 10, 0)
+	builds, err := client.ListRecentBuildsForProject(context.TODO(), VcsTypeGithub, "foo", "bar", "master", "running", 10, 0)
 	if err != nil {
 		t.Errorf("%s returned error: %v", call, err)
 	}
@@ -580,7 +580,7 @@ func TestClient_ListRecentBuildsForProject_noBranch(t *testing.T) {
 
 	call := "Client.ListRecentBuilds(foo, bar, , running, 10, 0)"
 
-	builds, err := client.ListRecentBuildsForProject(VcsTypeGithub, "foo", "bar", "", "running", 10, 0)
+	builds, err := client.ListRecentBuildsForProject(context.TODO(), VcsTypeGithub, "foo", "bar", "", "running", 10, 0)
 	if err != nil {
 		t.Errorf("%s returned error: %v", call, err)
 	}
@@ -599,7 +599,7 @@ func TestClient_GetBuild(t *testing.T) {
 		fmt.Fprint(w, `{"build_num": 123}`)
 	})
 
-	build, err := client.GetBuild(VcsTypeGithub, "jszwedko", "foo", 123)
+	build, err := client.GetBuild(context.TODO(), VcsTypeGithub, "jszwedko", "foo", 123)
 	if err != nil {
 		t.Errorf("Client.GetBuild(jszwedko, foo, 123) returned error: %v", err)
 	}
@@ -618,7 +618,7 @@ func TestClient_ListBuildArtifacts(t *testing.T) {
 		fmt.Fprint(w, `[{"path": "/some/path"}]`)
 	})
 
-	artifacts, err := client.ListBuildArtifacts(VcsTypeGithub, "jszwedko", "foo", 123)
+	artifacts, err := client.ListBuildArtifacts(context.TODO(), VcsTypeGithub, "jszwedko", "foo", 123)
 	if err != nil {
 		t.Errorf("Client.ListBuildArtifacts(github, jszwedko, foo, 123) returned error: %v", err)
 	}
@@ -637,7 +637,7 @@ func TestClient_ListTestMetadata(t *testing.T) {
 		fmt.Fprint(w, `{"tests": [{"name": "some test"}]}`)
 	})
 
-	metadata, err := client.ListTestMetadata(VcsTypeGithub, "jszwedko", "foo", 123)
+	metadata, err := client.ListTestMetadata(context.TODO(), VcsTypeGithub, "jszwedko", "foo", 123)
 	if err != nil {
 		t.Errorf("Client.ListTestMetadata(jszwedko, foo, 123) returned error: %v", err)
 	}
@@ -656,7 +656,7 @@ func TestClient_Build(t *testing.T) {
 		fmt.Fprint(w, `{"build_num": 123}`)
 	})
 
-	build, err := client.Build(VcsTypeGithub, "jszwedko", "foo", "master")
+	build, err := client.Build(context.TODO(), VcsTypeGithub, "jszwedko", "foo", "master")
 	if err != nil {
 		t.Errorf("Client.Build(jszwedko, foo, master) returned error: %v", err)
 	}
@@ -681,7 +681,7 @@ func TestClient_ParameterizedBuild(t *testing.T) {
 		"param": "foo",
 	}
 
-	build, err := client.ParameterizedBuild(VcsTypeGithub, "jszwedko", "foo", "master", params)
+	build, err := client.ParameterizedBuild(context.TODO(), VcsTypeGithub, "jszwedko", "foo", "master", params)
 	if err != nil {
 		t.Errorf("Client.Build(jszwedko, foo, master) returned error: %v", err)
 	}
@@ -709,7 +709,7 @@ func TestClient_BuildOpts(t *testing.T) {
 		"revision": "SHA",
 	}
 
-	build, err := client.BuildOpts(VcsTypeGithub, "jszwedko", "foo", "master", opts)
+	build, err := client.BuildOpts(context.TODO(), VcsTypeGithub, "jszwedko", "foo", "master", opts)
 	if err != nil {
 		t.Errorf("Client.Build(jszwedko, foo, master) returned error: %v", err)
 	}
@@ -730,7 +730,7 @@ func TestClient_BuildByProjectBranch(t *testing.T) {
 		fmt.Fprint(w, `{"status": 200, "body": "Build created"}`)
 	})
 
-	err := client.BuildByProjectBranch(VcsTypeGithub, "jszwedko", "foo", "master")
+	err := client.BuildByProjectBranch(context.TODO(), VcsTypeGithub, "jszwedko", "foo", "master")
 	if err != nil {
 		t.Errorf("Client.BuildByProjectBranch(github, jszwedko, foo, master) returned error: %v", err)
 	}
@@ -746,7 +746,7 @@ func TestClient_BuildByProjectRevision(t *testing.T) {
 		fmt.Fprint(w, `{"status": 200, "body": "Build created"}`)
 	})
 
-	err := client.BuildByProjectRevision(VcsTypeGithub, "jszwedko", "foo", "SHA")
+	err := client.BuildByProjectRevision(context.TODO(), VcsTypeGithub, "jszwedko", "foo", "SHA")
 	if err != nil {
 		t.Errorf("Client.BuildByProjectRevision(github, jszwedko, foo, SHA) returned error: %v", err)
 	}
@@ -762,7 +762,7 @@ func TestClient_BuildByProjectTag(t *testing.T) {
 		fmt.Fprint(w, `{"status": 200, "body": "Build created"}`)
 	})
 
-	err := client.BuildByProjectTag(VcsTypeGithub, "jszwedko", "foo", "v0.0.1")
+	err := client.BuildByProjectTag(context.TODO(), VcsTypeGithub, "jszwedko", "foo", "v0.0.1")
 	if err != nil {
 		t.Errorf("Client.BuildByProjectTag(github, jszwedko, foo, v0.0.1) returned error: %v", err)
 	}
@@ -783,7 +783,7 @@ func TestClient_BuildByProject(t *testing.T) {
 		"branch":   "pull/1234",
 	}
 
-	err := client.BuildByProject(VcsTypeGithub, "jszwedko", "foo", opts)
+	err := client.BuildByProject(context.TODO(), VcsTypeGithub, "jszwedko", "foo", opts)
 	if err != nil {
 		t.Errorf("Client.BuildByProjectTag(github, jszwedko, foo, opts) returned error: %v", err)
 	}
@@ -797,7 +797,7 @@ func TestClient_RetryBuild(t *testing.T) {
 		fmt.Fprint(w, `{"build_num": 124}`)
 	})
 
-	build, err := client.RetryBuild(VcsTypeGithub, "jszwedko", "foo", 123)
+	build, err := client.RetryBuild(context.TODO(), VcsTypeGithub, "jszwedko", "foo", 123)
 	if err != nil {
 		t.Errorf("Client.RetryBuild(jszwedko, foo, 123) returned error: %v", err)
 	}
@@ -816,7 +816,7 @@ func TestClient_CancelBuild(t *testing.T) {
 		fmt.Fprint(w, `{"build_num": 123}`)
 	})
 
-	build, err := client.CancelBuild(VcsTypeGithub, "jszwedko", "foo", 123)
+	build, err := client.CancelBuild(context.TODO(), VcsTypeGithub, "jszwedko", "foo", 123)
 	if err != nil {
 		t.Errorf("Client.CancelBuild(jszwedko, foo, 123) returned error: %v", err)
 	}
@@ -835,7 +835,7 @@ func TestClient_ClearCache(t *testing.T) {
 		fmt.Fprint(w, `{"status": "cache cleared"}`)
 	})
 
-	status, err := client.ClearCache(VcsTypeGithub, "jszwedko", "foo")
+	status, err := client.ClearCache(context.TODO(), VcsTypeGithub, "jszwedko", "foo")
 	if err != nil {
 		t.Errorf("Client.ClearCache(jszwedko, foo) returned error: %v", err)
 	}
@@ -855,7 +855,7 @@ func TestClient_AddEnvVar(t *testing.T) {
 		fmt.Fprint(w, `{"name": "bar"}`)
 	})
 
-	status, err := client.AddEnvVar(VcsTypeGithub, "jszwedko", "foo", "bar", "baz")
+	status, err := client.AddEnvVar(context.TODO(), VcsTypeGithub, "jszwedko", "foo", "bar", "baz")
 	if err != nil {
 		t.Errorf("Client.AddEnvVar(jszwedko, foo, bar, baz) returned error: %v", err)
 	}
@@ -875,7 +875,7 @@ func TestClient_ListEnvVars(t *testing.T) {
 		fmt.Fprint(w, `[{"name": "bar", "value":"xxxbar"}]`)
 	})
 
-	status, err := client.ListEnvVars(VcsTypeGithub, "jszwedko", "foo")
+	status, err := client.ListEnvVars(context.TODO(), VcsTypeGithub, "jszwedko", "foo")
 	if err != nil {
 		t.Errorf("Client.ListEnvVars(jszwedko, foo) returned error: %v", err)
 	}
@@ -897,7 +897,7 @@ func TestClient_DeleteEnvVar(t *testing.T) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	err := client.DeleteEnvVar(VcsTypeGithub, "jszwedko", "foo", "bar")
+	err := client.DeleteEnvVar(context.TODO(), VcsTypeGithub, "jszwedko", "foo", "bar")
 	if err != nil {
 		t.Errorf("Client.DeleteEnvVar(jszwedko, foo, bar) returned error: %v", err)
 	}
@@ -912,7 +912,7 @@ func TestClient_AddSSHKey(t *testing.T) {
 		w.WriteHeader(http.StatusCreated)
 	})
 
-	err := client.AddSSHKey(VcsTypeGithub, "jszwedko", "foo", "example.com", "some-key")
+	err := client.AddSSHKey(context.TODO(), VcsTypeGithub, "jszwedko", "foo", "example.com", "some-key")
 	if err != nil {
 		t.Errorf("Client.AddSSHKey(jszwedko, foo, example.com, some-key) returned error: %v", err)
 	}
@@ -928,7 +928,7 @@ func TestClient_GetActionOutput(t *testing.T) {
 
 	action := &Action{HasOutput: true, OutputURL: server.URL + "/some-s3-path"}
 
-	outputs, err := client.GetActionOutputs(action)
+	outputs, err := client.GetActionOutputs(context.TODO(), action)
 	if err != nil {
 		t.Errorf("Client.GetActionOutput(%+v) returned error: %v", action, err)
 	}
@@ -952,7 +952,7 @@ func TestClient_GetActionOutput_withDebug(t *testing.T) {
 
 	action := &Action{HasOutput: true, OutputURL: server.URL + "/some-s3-path"}
 
-	_, err := client.GetActionOutputs(action)
+	_, err := client.GetActionOutputs(context.TODO(), action)
 	if err != nil {
 		t.Errorf("Client.GetActionOutput(%+v) returned error: %v", action, err)
 	}
@@ -981,7 +981,7 @@ func TestClient_GetActionOutput_noOutput(t *testing.T) {
 
 	action := &Action{HasOutput: false}
 
-	outputs, err := client.GetActionOutputs(action)
+	outputs, err := client.GetActionOutputs(context.TODO(), action)
 	if err != nil {
 		t.Errorf("Client.GetActionOutput(%+v) returned error: %v", action, err)
 	}
@@ -1003,7 +1003,7 @@ func TestClient_GetActionOutput_withContext(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 0*time.Microsecond)
 	defer cancel()
-	_, err := client.GetActionOutputsWithContext(ctx, action)
+	_, err := client.GetActionOutputs(ctx, action)
 	if err == nil || !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("Client.GetActionOutput(%+v) should've returned context deadline error", action)
 	}
@@ -1024,7 +1024,7 @@ func TestClient_ListCheckoutKeys(t *testing.T) {
 		}]`)
 	})
 
-	checkoutKeys, err := client.ListCheckoutKeys(VcsTypeGithub, "jszwedko", "foo")
+	checkoutKeys, err := client.ListCheckoutKeys(context.TODO(), VcsTypeGithub, "jszwedko", "foo")
 	if err != nil {
 		t.Errorf("Client.ListCheckoutKeys(jszwedko, foo) returned error: %v", err)
 	}
@@ -1057,7 +1057,7 @@ func TestClient_CreateCheckoutKey(t *testing.T) {
 		}`)
 	})
 
-	checkoutKey, err := client.CreateCheckoutKey(VcsTypeGithub, "jszwedko", "foo", "github-user-key")
+	checkoutKey, err := client.CreateCheckoutKey(context.TODO(), VcsTypeGithub, "jszwedko", "foo", "github-user-key")
 	if err != nil {
 		t.Errorf("Client.CreateCheckoutKey(jszwedko, foo, github-user-key) returned error: %v", err)
 	}
@@ -1090,7 +1090,7 @@ func TestClient_GetCheckoutKey(t *testing.T) {
 		}`)
 	})
 
-	checkoutKey, err := client.GetCheckoutKey(VcsTypeGithub, "jszwedko", "foo", "37:27:f7:68:85:43:46:d2:e1:30:83:8f:f7:1b:ad:c2")
+	checkoutKey, err := client.GetCheckoutKey(context.TODO(), VcsTypeGithub, "jszwedko", "foo", "37:27:f7:68:85:43:46:d2:e1:30:83:8f:f7:1b:ad:c2")
 	if err != nil {
 		t.Errorf("Client.GetCheckoutKey(jszwedko, foo, 37:27:f7:68:85:43:46:d2:e1:30:83:8f:f7:1b:ad:c2) returned error: %v", err)
 	}
@@ -1116,7 +1116,7 @@ func TestClient_DeleteCheckoutKey(t *testing.T) {
 		fmt.Fprintf(w, `{"message": "ok"}`)
 	})
 
-	err := client.DeleteCheckoutKey(VcsTypeGithub, "jszwedko", "foo", "37:27:f7:68:85:43:46:d2:e1:30:83:8f:f7:1b:ad:c2")
+	err := client.DeleteCheckoutKey(context.TODO(), VcsTypeGithub, "jszwedko", "foo", "37:27:f7:68:85:43:46:d2:e1:30:83:8f:f7:1b:ad:c2")
 	if err != nil {
 		t.Errorf("Client.DeleteCheckoutKey(jszwedko, foo, 37:27:f7:68:85:43:46:d2:e1:30:83:8f:f7:1b:ad:c2) returned error: %v", err)
 	}
@@ -1131,7 +1131,7 @@ func TestClient_AddSSHUser(t *testing.T) {
 		fmt.Fprint(w, `{"ssh_users": [{"github_id": 1234, "login": "jszwedko"}]}`)
 	})
 
-	build, err := client.AddSSHUser(VcsTypeGithub, "jszwedko", "foo", 123)
+	build, err := client.AddSSHUser(context.TODO(), VcsTypeGithub, "jszwedko", "foo", 123)
 	if err != nil {
 		t.Errorf("Client.AddSSHUser(jszwedko, foo, 123) returned error: %v", err)
 	}
@@ -1152,7 +1152,7 @@ func TestClient_AddHerokuKey(t *testing.T) {
 		fmt.Fprint(w, `""`)
 	})
 
-	err := client.AddHerokuKey("53433a12-9c99-11e5-97f5-1458d009721")
+	err := client.AddHerokuKey(context.TODO(), "53433a12-9c99-11e5-97f5-1458d009721")
 	if err != nil {
 		t.Errorf("Client.AddHerokuKey(53433a12-9c99-11e5-97f5-1458d009721) returned error: %v", err)
 	}
@@ -1177,7 +1177,7 @@ func TestClient_TriggerPipeline(t *testing.T) {
 			"tbs_pr":  "bar",
 			"tbs_sha": "foo",
 		}
-		got, err := client.TriggerPipeline(VcsTypeGithub, "mattermost", "mattermod", "testbranch", "", params)
+		got, err := client.TriggerPipeline(context.TODO(), VcsTypeGithub, "mattermost", "mattermod", "testbranch", "", params)
 		if err != nil {
 			t.Errorf("Client.TriggerPipeline(mattermost, mattermod) returned error: %v", err)
 			return
@@ -1204,7 +1204,7 @@ func TestClient_TriggerPipeline(t *testing.T) {
 			"tbs_pr":  "bar",
 			"tbs_sha": "foo",
 		}
-		_, err := client.TriggerPipeline(VcsTypeGithub, "mattermost", "mattermod", "testbranch", "testtag", params)
+		_, err := client.TriggerPipeline(context.TODO(), VcsTypeGithub, "mattermost", "mattermod", "testbranch", "testtag", params)
 		if err == nil {
 			t.Errorf("Client.TriggerPipeline(mattermost, mattermod) should have returned error")
 			return
@@ -1225,7 +1225,7 @@ func TestClient_GetPipelineWorkflow(t *testing.T) {
 		client.Version = APIVersion11
 	}()
 
-	got, err := client.GetPipelineWorkflow("id", "")
+	got, err := client.GetPipelineWorkflows(context.TODO(), "id", "")
 	if err != nil {
 		t.Errorf("Client.GetPipeline(id, \"\") returned error: %v", err)
 		return
@@ -1297,15 +1297,15 @@ func TestClient_GetPipelineByBranch(t *testing.T) {
 			client.Version = APIVersion11
 		}()
 
-		got, err := client.GetPipelineByBranch(VcsTypeGithub, "mattermost", "mattermod", "testbranch", "")
+		got, err := client.GetPipelineByBranch(context.TODO(), VcsTypeGithub, "mattermost", "mattermod", "testbranch", "")
 		if err != nil {
 			t.Errorf("Client.GetPipelineByBranch(mattermost, mattermod) returned error: %v", err)
 			return
 		}
 
-		want := &Pipelines{
+		want := &PipelineList{
 			NextPageToken: "",
-			Items: []Items{
+			Items: []PipelineItem{
 				{
 					ID:          "8c9c042e-c08d-4aa1-aee6-0f3810885b4e",
 					ProjectSlug: "gh/mattermost/mattermod",
@@ -1353,7 +1353,7 @@ func TestClient_CancelWorkflow(t *testing.T) {
 			fmt.Fprint(w, `{"message": "Accepted."}`)
 		})
 
-		build, err := client.CancelWorkflow("123-abc-345")
+		build, err := client.CancelWorkflow(context.TODO(), "123-abc-345")
 		if err != nil {
 			t.Errorf("Client.CancelWorkflow returned error: %v", err)
 		}
