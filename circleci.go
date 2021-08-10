@@ -1147,9 +1147,9 @@ type WorkflowStatus string
 
 const (
 	WorkflowStarted WorkflowStatus = "started"
-	WorkflowOnHold                 = "on_hold"
-	WorkflowFailed                 = "failed"
-	WorkflowSuccess                = "success"
+	WorkflowOnHold  WorkflowStatus = "on_hold"
+	WorkflowFailed  WorkflowStatus = "failed"
+	WorkflowSuccess WorkflowStatus = "success"
 )
 
 // WorkflowItem represents a workflow.
