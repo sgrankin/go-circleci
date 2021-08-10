@@ -1074,6 +1074,14 @@ func (c *Client) GetPipelineByBranchWithContext(ctx context.Context, vcsType Vcs
 	return p, nil
 }
 
+func (c *Client) GetWorkflow(ctx context.Context, workflowID string) (*WorkflowItem, error) {
+	if c.Version < APIVersion2 {
+		return nil, newInvalidVersionError(c.Version)
+	}
+	w := &WorkflowItem{}
+	return w, c.request(ctx, http.MethodGet, fmt.Sprintf("workflow/%s", workflowID), &w, nil, nil)
+}
+
 // CancelWorkflow triggers a cancel of the specified workflow using CirclerCI apiV2
 // Returns a status message
 func (c *Client) CancelWorkflow(workflowID string) (*CancelWorkflow, error) {
