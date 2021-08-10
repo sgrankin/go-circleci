@@ -1143,6 +1143,15 @@ type Items struct {
 	Vcs         Vcs     `json:"vcs"`
 }
 
+type WorkflowStatus string
+
+const (
+	WorkflowStarted WorkflowStatus = "started"
+	WorkflowOnHold                 = "on_hold"
+	WorkflowFailed                 = "failed"
+	WorkflowSuccess                = "success"
+)
+
 // WorkflowItem represents a workflow.
 type WorkflowItem struct {
 	// The ID of the pipeline this workflow belongs to.
@@ -1150,7 +1159,7 @@ type WorkflowItem struct {
 	// The number of the pipeline this workflow belongs to.
 	Number int `json:"pipeline_number"`
 	// The current status of the workflow.
-	Status string `json:"status"`
+	Status WorkflowStatus `json:"status"`
 	// The unique ID of the workflow.
 	WorkflowID string `json:"id"`
 	// The name of the workflow.

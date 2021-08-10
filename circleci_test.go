@@ -1240,7 +1240,7 @@ func TestClient_GetPipelineWorkflow(t *testing.T) {
 				Name:        "CI",
 				ProjectSlug: "github/mattermost/mattermod",
 				ErroredBy:   "someone",
-				Status:      "success",
+				Status:      WorkflowSuccess,
 				StartedBy:   "someone",
 				Number:      0,
 				CreatedAt:   time.Date(2020, time.August, 5, 19, 33, 8, 0, time.UTC),
