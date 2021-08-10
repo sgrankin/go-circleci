@@ -1304,7 +1304,7 @@ func TestClient_GetPipelineByBranch(t *testing.T) {
 		}
 
 		want := &Pipelines{
-			NextPageToken: nil,
+			NextPageToken: "",
 			Items: []Items{
 				{
 					ID:          "8c9c042e-c08d-4aa1-aee6-0f3810885b4e",

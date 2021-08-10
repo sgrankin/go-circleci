@@ -1109,8 +1109,8 @@ type CancelWorkflow struct {
 }
 
 type Pipelines struct {
-	NextPageToken interface{} `json:"next_page_token,omitempty"`
-	Items         []Items     `json:"items"`
+	NextPageToken string  `json:"next_page_token,omitempty"`
+	Items         []Items `json:"items"`
 }
 
 type Actor struct {
