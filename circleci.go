@@ -1154,11 +1154,12 @@ type Items struct {
 type WorkflowStatus string
 
 const (
-	WorkflowStarted WorkflowStatus = "started"
-	WorkflowOnHold  WorkflowStatus = "on_hold"
-	WorkflowFailed  WorkflowStatus = "failed"
-	WorkflowSuccess WorkflowStatus = "success"
-	WorkflowRunning WorkflowStatus = "running"
+	WorkflowCancelled WorkflowStatus = "cancelled"
+	WorkflowFailed    WorkflowStatus = "failed"
+	WorkflowOnHold    WorkflowStatus = "on_hold"
+	WorkflowRunning   WorkflowStatus = "running"
+	WorkflowStarted   WorkflowStatus = "started"
+	WorkflowSuccess   WorkflowStatus = "success"
 )
 
 // WorkflowItem represents a workflow.
