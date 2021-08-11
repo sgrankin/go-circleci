@@ -934,12 +934,14 @@ type PipelineItem struct {
 type WorkflowStatus string
 
 const (
-	WorkflowCancelled WorkflowStatus = "cancelled"
-	WorkflowFailed    WorkflowStatus = "failed"
-	WorkflowOnHold    WorkflowStatus = "on_hold"
+	WorkflowCreated WorkflowStatus = "created"
+
 	WorkflowRunning WorkflowStatus = "running"
-	WorkflowStarted   WorkflowStatus = "started"
+	WorkflowOnHold  WorkflowStatus = "on_hold"
+
 	WorkflowSuccess   WorkflowStatus = "success"
+	WorkflowFailed    WorkflowStatus = "failed"
+	WorkflowCancelled WorkflowStatus = "cancelled"
 )
 
 // WorkflowItem represents a workflow.
