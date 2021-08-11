@@ -827,14 +827,14 @@ func (c *Client) TriggerPipeline(ctx context.Context, vcsType VcsType, account, 
 	return p, nil
 }
 
-func (c *Client) GetPipeline(ctx context.Context, vcsType VcsType, account, repo, pageToken string) (*PipelineList, error) {
-	return c.GetPipelineByBranch(ctx, vcsType, account, repo, "", pageToken)
+func (c *Client) GetPipelines(ctx context.Context, vcsType VcsType, account, repo, pageToken string) (*PipelineList, error) {
+	return c.GetPipelinesForBranch(ctx, vcsType, account, repo, "", pageToken)
 }
 
-// GetPipelineByBranch gets a pipeline for the given project for the given branch.
+// GetPipelinesForBranch gets a pipeline for the given project for the given branch.
 // https://circleci.com/docs/api/v2/#operation/listPipelinesForProject
 // Note that this is only available as a v2 API.
-func (c *Client) GetPipelineByBranch(ctx context.Context, vcsType VcsType, account, repo, branch, pageToken string) (*PipelineList, error) {
+func (c *Client) GetPipelinesForBranch(ctx context.Context, vcsType VcsType, account, repo, branch, pageToken string) (*PipelineList, error) {
 	if c.Version < APIVersion2 {
 		return nil, newInvalidVersionError(c.Version)
 	}
@@ -937,7 +937,7 @@ const (
 	WorkflowCancelled WorkflowStatus = "cancelled"
 	WorkflowFailed    WorkflowStatus = "failed"
 	WorkflowOnHold    WorkflowStatus = "on_hold"
-	WorkflowRunning   WorkflowStatus = "running"
+	WorkflowRunning WorkflowStatus = "running"
 	WorkflowStarted   WorkflowStatus = "started"
 	WorkflowSuccess   WorkflowStatus = "success"
 )

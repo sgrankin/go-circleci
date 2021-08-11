@@ -1297,7 +1297,7 @@ func TestClient_GetPipelineByBranch(t *testing.T) {
 			client.Version = APIVersion11
 		}()
 
-		got, err := client.GetPipelineByBranch(context.TODO(), VcsTypeGithub, "mattermost", "mattermod", "testbranch", "")
+		got, err := client.GetPipelinesForBranch(context.TODO(), VcsTypeGithub, "mattermost", "mattermod", "testbranch", "")
 		if err != nil {
 			t.Errorf("Client.GetPipelineByBranch(mattermost, mattermod) returned error: %v", err)
 			return
