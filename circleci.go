@@ -939,9 +939,9 @@ const (
 	WorkflowRunning WorkflowStatus = "running"
 	WorkflowOnHold  WorkflowStatus = "on_hold"
 
-	WorkflowSuccess   WorkflowStatus = "success"
-	WorkflowFailed    WorkflowStatus = "failed"
-	WorkflowCancelled WorkflowStatus = "cancelled"
+	WorkflowSuccess  WorkflowStatus = "success"
+	WorkflowFailed   WorkflowStatus = "failed"
+	WorkflowCanceled WorkflowStatus = "canceled"
 )
 
 // WorkflowItem represents a workflow.
